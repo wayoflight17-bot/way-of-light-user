@@ -2749,75 +2749,11 @@
                 pendingGoogleUser = null;
                 setupRealtimeData();
                 window.switchView('view-dashboard');
-                setTimeout(showNotifGateIfNeeded, 2000);
                 // Gate: onboarding already sets username, so no gate needed here
                 checkAndShowUsernameGate();
             } catch (e) {
                 showError("Failed to save profile. Check connection.", 'onboard-error');
             }
-        };
-
-
-        // ── NOTIFICATION GATE ──────────────────────────────────────────────────
-        // Shows once per login session if the user is not yet subscribed.
-        // Uses sessionStorage so it only nags once per browser session, not on every page load.
-        const NOTIF_GATE_SESSION_KEY = 'notifGateShownThisSession';
-
-        const showNotifGateIfNeeded = async () => {
-            if (!currentUser) return;
-            if (VAPID_PUBLIC_KEY.startsWith('PASTE_')) return; // not configured yet
-            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
-            if (Notification.permission === 'denied') return;
-            if (sessionStorage.getItem(NOTIF_GATE_SESSION_KEY)) return;
-            // Check if already subscribed
-            try {
-                const reg = swRegistration || await navigator.serviceWorker.ready;
-                const sub = await reg.pushManager.getSubscription();
-                if (sub) return; // already subscribed — don't nag
-            } catch (e) { return; }
-            // Show the gate
-            const overlay = document.getElementById('notif-gate-overlay');
-            if (overlay) { overlay.style.display = 'flex'; }
-            sessionStorage.setItem(NOTIF_GATE_SESSION_KEY, '1');
-        };
-
-        window.notifGateEnable = async () => {
-            const btn = document.getElementById('notif-gate-enable-btn');
-            const errEl = document.getElementById('notif-gate-error');
-            if (btn) { btn.disabled = true; btn.innerText = 'Enabling…'; }
-            if (errEl) errEl.style.display = 'none';
-            try {
-                if (VAPID_PUBLIC_KEY.startsWith('PASTE_')) throw new Error('VAPID key not configured.');
-                const reg = swRegistration || await navigator.serviceWorker.ready;
-                const permission = await Notification.requestPermission();
-                if (permission !== 'granted') {
-                    if (errEl) { errEl.innerText = 'Permission was not granted. Please allow notifications when your browser asks.'; errEl.style.display = 'block'; }
-                    if (btn) { btn.disabled = false; btn.innerText = '🔔 Enable Notifications'; }
-                    return;
-                }
-                const sub = await reg.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-                });
-                await setDoc(getPushSubscriptionDoc(currentUser.uid), {
-                    uid: currentUser.uid, subscription: sub.toJSON(),
-                    name: userData?.name || '', updatedAt: Date.now()
-                });
-                // Close gate
-                const overlay = document.getElementById('notif-gate-overlay');
-                if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.style.display = 'none', 400); }
-                showToast('Notifications enabled! You're all set. 🔔', '✅');
-                await window.refreshNotificationToggleUI();
-            } catch (e) {
-                console.error('Notif gate enable error:', e);
-                if (errEl) { errEl.innerText = 'Could not enable notifications: ' + (e.message || 'Unknown error'); errEl.style.display = 'block'; }
-                if (btn) { btn.disabled = false; btn.innerText = '🔔 Enable Notifications'; }
-            }
-        };
-
-        window.notifGateLater = () => {
-            const overlay = document.getElementById('notif-gate-overlay');
-            if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.style.display = 'none', 400); }
         };
 
         const init = async () => {
@@ -2882,7 +2818,6 @@
                         if(snap.exists()) {
                             setupRealtimeData();
                             window.routeFromNotificationHash();
-                            setTimeout(showNotifGateIfNeeded, 1500);
                         } else {
                             pendingGoogleUser = user;
                             document.getElementById('onboard-name').value = user.displayName || '';
@@ -5926,68 +5861,6 @@
         window.onload = init;
     </script>
 
-
-    <!-- ===== NOTIFICATION PERMISSION OVERLAY ===== -->
-    <!-- Shown once after login if the user hasn't subscribed yet. Cannot be skipped — only 
-         "Enable" (subscribes) or "Later" (re-shows on next login) are offered. -->
-    <div id="notif-gate-overlay" style="
-        display:none; position:fixed; inset:0; z-index:9000;
-        background:rgba(15,23,42,0.92); backdrop-filter:blur(10px);
-        align-items:center; justify-content:center; padding:20px;
-    ">
-        <style>@keyframes notifGatePop{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}</style>
-        <div style="
-            background:white; border-radius:28px; width:100%; max-width:380px;
-            overflow:hidden; box-shadow:0 40px 80px rgba(0,0,0,0.5);
-            animation: notifGatePop 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
-            font-family:'Plus Jakarta Sans',sans-serif;
-        ">
-            <!-- Header gradient -->
-            <div style="background:linear-gradient(135deg,#312e81,#4f46e5); padding:28px 24px 20px; text-align:center;">
-                <div style="font-size:48px; margin-bottom:8px;">🔔</div>
-                <div style="color:white; font-size:20px; font-weight:900;">Stay in the Loop!</div>
-                <div style="color:rgba(255,255,255,0.75); font-size:13px; font-weight:500; margin-top:6px; line-height:1.5;">
-                    Get instant alerts for new tests, seasons, study material & winner announcements — even when the app is closed.
-                </div>
-            </div>
-            <!-- Body -->
-            <div style="padding:20px 24px 24px;">
-                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
-                    <div style="display:flex; align-items:center; gap:10px; background:#f0fdf4; border-radius:12px; padding:12px;">
-                        <span style="font-size:20px;">📝</span>
-                        <span style="font-size:13px; font-weight:700; color:#166534;">New tests published</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px; background:#eff6ff; border-radius:12px; padding:12px;">
-                        <span style="font-size:20px;">🏆</span>
-                        <span style="font-size:13px; font-weight:700; color:#1e40af;">Season starts & winner announcements</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:10px; background:#fdf4ff; border-radius:12px; padding:12px;">
-                        <span style="font-size:20px;">📚</span>
-                        <span style="font-size:13px; font-weight:700; color:#7e22ce;">New study material posted</span>
-                    </div>
-                </div>
-                <div id="notif-gate-error" style="display:none; background:#fef2f2; border:1px solid #fca5a5; color:#991b1b; border-radius:10px; padding:10px 12px; font-size:12px; font-weight:600; margin-bottom:12px;"></div>
-                <button id="notif-gate-enable-btn" onclick="window.notifGateEnable()" style="
-                    width:100%; padding:15px; background:linear-gradient(135deg,#4f46e5,#7c3aed);
-                    color:white; font-size:15px; font-weight:900; border:none; border-radius:14px;
-                    cursor:pointer; margin-bottom:10px; letter-spacing:0.3px;
-                    box-shadow:0 4px 15px rgba(79,70,229,0.4); transition:opacity 0.2s;
-                " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
-                    🔔 Enable Notifications
-                </button>
-                <button onclick="window.notifGateLater()" style="
-                    width:100%; padding:12px; background:#f1f5f9;
-                    color:#64748b; font-size:13px; font-weight:700; border:none; border-radius:14px;
-                    cursor:pointer; transition:background 0.2s;
-                " onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
-                    Remind me later
-                </button>
-                <p style="text-align:center; font-size:11px; color:#94a3b8; font-weight:500; margin-top:10px; line-height:1.5;">
-                    You can always change this in your Profile settings.
-                </p>
-            </div>
-        </div>
-    </div>
 
 </body>
 </html>
