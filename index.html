@@ -2758,24 +2758,6 @@
         };
 
 
-        // ── SPLASH SCREEN ──────────────────────────────────────────────────────
-        const hideSplash = () => {
-            const splash = document.getElementById('splash-screen');
-            if (!splash) return;
-            splash.style.opacity = '0';
-            splash.style.visibility = 'hidden';
-            setTimeout(() => splash.remove(), 700);
-        };
-        // Hide splash once Firebase auth has responded (handled in onAuthStateChanged below)
-        // but also hard-stop after 4s in case something hangs
-        setTimeout(hideSplash, 4000);
-
-        // Update splash title from config once loaded
-        const updateSplashTitle = (title) => {
-            const el = document.getElementById('splash-title');
-            if (el && title) el.innerText = title;
-        };
-
         // ── NOTIFICATION GATE ──────────────────────────────────────────────────
         // Shows once per login session if the user is not yet subscribed.
         // Uses sessionStorage so it only nags once per browser session, not on every page load.
@@ -2883,7 +2865,6 @@
                 setImgSrc('app-dynamic-logo-large', logoSrc);
                 document.getElementById('app-dynamic-logo-large').classList.remove('hidden');
                 document.getElementById('app-default-logo-large').classList.add('hidden');
-                if (globalData.config && globalData.config.appName) updateSplashTitle(globalData.config.appName);
             });
 
             onAuthStateChanged(auth, async (user) => {
@@ -2895,7 +2876,6 @@
                         if(snap.exists()) {
                             setupRealtimeData();
                             window.routeFromNotificationHash();
-                            hideSplash();
                             setTimeout(showNotifGateIfNeeded, 1500);
                         } else {
                             pendingGoogleUser = user;
@@ -2910,9 +2890,9 @@
                         }
                     } catch (e) {
                         console.error("Failed to fetch user doc: ", e);
+                        window.switchView('view-auth');
                     }
                 } else {
-                    hideSplash();
                     window.switchView('view-auth');
                 }
             });
@@ -5933,53 +5913,6 @@
         window.onload = init;
     </script>
 
-    <!-- ===== LOGO SPLASH SCREEN ===== -->
-    <div id="splash-screen" style="
-        position:fixed; inset:0; z-index:9999;
-        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
-        display:flex; flex-direction:column; align-items:center; justify-content:center;
-        transition: opacity 0.6s ease, visibility 0.6s ease;
-    ">
-        <div id="splash-logo-wrap" style="
-            width:120px; height:120px; border-radius:32px; overflow:hidden;
-            background:white; display:flex; align-items:center; justify-content:center;
-            box-shadow: 0 0 0 0 rgba(255,255,255,0.4);
-            animation: splashPulse 1.8s ease-in-out infinite, splashBounceIn 0.7s cubic-bezier(0.16,1,0.3,1) forwards;
-        ">
-            <img id="splash-logo-img" src="logo.jpeg" alt="Logo"
-                onerror="this.style.display='none'; document.getElementById('splash-logo-fallback').style.display='flex';"
-                style="width:100%; height:100%; object-fit:cover;">
-            <div id="splash-logo-fallback" style="display:none; width:100%; height:100%; background:#4f46e5; align-items:center; justify-content:center;">
-                <svg style="width:60px;height:60px;color:white;" fill="none" stroke="white" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
-                </svg>
-            </div>
-        </div>
-        <div style="
-            margin-top:24px; color:white; font-family:'Plus Jakarta Sans',sans-serif;
-            font-size:22px; font-weight:900; letter-spacing:-0.5px;
-            animation: splashFadeUp 0.7s 0.3s cubic-bezier(0.16,1,0.3,1) both;
-        " id="splash-title">Way of Light</div>
-        <div style="
-            margin-top:8px; color:rgba(255,255,255,0.55);
-            font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:600;
-            animation: splashFadeUp 0.7s 0.5s cubic-bezier(0.16,1,0.3,1) both;
-        ">Loading…</div>
-    </div>
-    <style>
-        @keyframes splashBounceIn {
-            from { opacity:0; transform:scale(0.6); }
-            to   { opacity:1; transform:scale(1); }
-        }
-        @keyframes splashFadeUp {
-            from { opacity:0; transform:translateY(16px); }
-            to   { opacity:1; transform:translateY(0); }
-        }
-        @keyframes splashPulse {
-            0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.35); }
-            50%      { box-shadow: 0 0 0 18px rgba(255,255,255,0); }
-        }
-    </style>
 
     <!-- ===== NOTIFICATION PERMISSION OVERLAY ===== -->
     <!-- Shown once after login if the user hasn't subscribed yet. Cannot be skipped — only 
@@ -5989,10 +5922,11 @@
         background:rgba(15,23,42,0.92); backdrop-filter:blur(10px);
         align-items:center; justify-content:center; padding:20px;
     ">
+        <style>@keyframes notifGatePop{from{opacity:0;transform:scale(0.85)}to{opacity:1;transform:scale(1)}}</style>
         <div style="
             background:white; border-radius:28px; width:100%; max-width:380px;
             overflow:hidden; box-shadow:0 40px 80px rgba(0,0,0,0.5);
-            animation: splashBounceIn 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+            animation: notifGatePop 0.4s cubic-bezier(0.16,1,0.3,1) forwards;
             font-family:'Plus Jakarta Sans',sans-serif;
         ">
             <!-- Header gradient -->
