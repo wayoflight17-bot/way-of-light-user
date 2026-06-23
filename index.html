@@ -1625,7 +1625,7 @@
         const registerExamServiceWorker = async () => {
             if (!('serviceWorker' in navigator)) return null;
             try {
-                swRegistration = await navigator.serviceWorker.register('sw.js');
+                swRegistration = await navigator.serviceWorker.register('sw.js', { scope: './' });
                 return swRegistration;
             } catch (e) {
                 console.warn('Service Worker registration failed (notifications will be skipped, the timer itself is unaffected):', e);
@@ -2847,25 +2847,31 @@
 
             await initAuth();
 
-            onSnapshot(getPublicDoc('admin_settings', 'config'), docSnap => {
-                if(docSnap.exists()) {
-                    globalData.config = docSnap.data();
-                    
-                    if(globalData.config.webName) {
-                        document.title = globalData.config.webName;
-                        document.querySelectorAll('.app-title-text').forEach(el => el.innerText = globalData.config.webName);
-                    }
+            const applyConfig = (cfg) => {
+                if (!cfg) return;
+                globalData.config = cfg;
+                if (cfg.webName) {
+                    document.title = cfg.webName;
+                    document.querySelectorAll('.app-title-text').forEach(el => el.innerText = cfg.webName);
                 }
-
-                const logoSrc = (globalData.config && globalData.config.logoUrl) || 'logo.jpeg';
+                const logoSrc = cfg.logoUrl || 'logo.jpeg';
                 setImgSrc('app-dynamic-logo', logoSrc);
                 document.getElementById('app-dynamic-logo').classList.remove('hidden');
                 document.getElementById('app-default-logo').classList.add('hidden');
-
                 setImgSrc('app-dynamic-logo-large', logoSrc);
                 document.getElementById('app-dynamic-logo-large').classList.remove('hidden');
                 document.getElementById('app-default-logo-large').classList.add('hidden');
-            });
+            };
+
+            // Listen to config — with error handler so a permission error doesn't crash the app
+            onSnapshot(
+                getPublicDoc('admin_settings', 'config'),
+                docSnap => { if (docSnap.exists()) applyConfig(docSnap.data()); },
+                err => {
+                    // Firestore permission denied before auth is ready — retry once auth completes
+                    console.warn('Config listener error (will retry after auth):', err.code);
+                }
+            );
 
             onAuthStateChanged(auth, async (user) => {
                 if(user) {
@@ -2901,6 +2907,13 @@
         const setupRealtimeData = () => {
             unsubscribes.forEach(u => u());
             unsubscribes = [];
+            // Re-subscribe config listener now that we are authenticated
+            // (covers case where the pre-auth listener was blocked by Firestore rules)
+            unsubscribes.push(onSnapshot(
+                getPublicDoc('admin_settings', 'config'),
+                docSnap => { if (docSnap.exists()) applyConfig(docSnap.data()); },
+                err => console.warn('Config re-listen error:', err.code)
+            ));
 
             setupSocialListeners();
 
