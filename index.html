@@ -1574,6 +1574,7 @@
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
         import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, linkWithCredential, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, getDoc, query, where, onSnapshot, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAdkg78FvNF42a5YCmPsZiaE3ZePeC8Vww",
@@ -1587,6 +1588,7 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const functions = getFunctions(app);
         try { getAnalytics(app); } catch(e) {} 
 
         const auth = getAuth(app);
@@ -2747,11 +2749,93 @@
                 pendingGoogleUser = null;
                 setupRealtimeData();
                 window.switchView('view-dashboard');
+                setTimeout(showNotifGateIfNeeded, 2000);
                 // Gate: onboarding already sets username, so no gate needed here
                 checkAndShowUsernameGate();
             } catch (e) {
                 showError("Failed to save profile. Check connection.", 'onboard-error');
             }
+        };
+
+
+        // ── SPLASH SCREEN ──────────────────────────────────────────────────────
+        const hideSplash = () => {
+            const splash = document.getElementById('splash-screen');
+            if (!splash) return;
+            splash.style.opacity = '0';
+            splash.style.visibility = 'hidden';
+            setTimeout(() => splash.remove(), 700);
+        };
+        // Hide splash once Firebase auth has responded (handled in onAuthStateChanged below)
+        // but also hard-stop after 4s in case something hangs
+        setTimeout(hideSplash, 4000);
+
+        // Update splash title from config once loaded
+        const updateSplashTitle = (title) => {
+            const el = document.getElementById('splash-title');
+            if (el && title) el.innerText = title;
+        };
+
+        // ── NOTIFICATION GATE ──────────────────────────────────────────────────
+        // Shows once per login session if the user is not yet subscribed.
+        // Uses sessionStorage so it only nags once per browser session, not on every page load.
+        const NOTIF_GATE_SESSION_KEY = 'notifGateShownThisSession';
+
+        const showNotifGateIfNeeded = async () => {
+            if (!currentUser) return;
+            if (VAPID_PUBLIC_KEY.startsWith('PASTE_')) return; // not configured yet
+            if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return;
+            if (Notification.permission === 'denied') return;
+            if (sessionStorage.getItem(NOTIF_GATE_SESSION_KEY)) return;
+            // Check if already subscribed
+            try {
+                const reg = swRegistration || await navigator.serviceWorker.ready;
+                const sub = await reg.pushManager.getSubscription();
+                if (sub) return; // already subscribed — don't nag
+            } catch (e) { return; }
+            // Show the gate
+            const overlay = document.getElementById('notif-gate-overlay');
+            if (overlay) { overlay.style.display = 'flex'; }
+            sessionStorage.setItem(NOTIF_GATE_SESSION_KEY, '1');
+        };
+
+        window.notifGateEnable = async () => {
+            const btn = document.getElementById('notif-gate-enable-btn');
+            const errEl = document.getElementById('notif-gate-error');
+            if (btn) { btn.disabled = true; btn.innerText = 'Enabling…'; }
+            if (errEl) errEl.style.display = 'none';
+            try {
+                if (VAPID_PUBLIC_KEY.startsWith('PASTE_')) throw new Error('VAPID key not configured.');
+                const reg = swRegistration || await navigator.serviceWorker.ready;
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    if (errEl) { errEl.innerText = 'Permission was not granted. Please allow notifications when your browser asks.'; errEl.style.display = 'block'; }
+                    if (btn) { btn.disabled = false; btn.innerText = '🔔 Enable Notifications'; }
+                    return;
+                }
+                const sub = await reg.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+                await setDoc(getPushSubscriptionDoc(currentUser.uid), {
+                    uid: currentUser.uid, subscription: sub.toJSON(),
+                    name: userData?.name || '', updatedAt: Date.now()
+                });
+                // Close gate
+                const overlay = document.getElementById('notif-gate-overlay');
+                if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.style.display = 'none', 400); }
+                showToast('Notifications enabled! You're all set. 🔔', '✅');
+                await window.refreshNotificationToggleUI();
+            } catch (e) {
+                console.error('Notif gate enable error:', e);
+                if (errEl) { errEl.innerText = 'Could not enable notifications: ' + (e.message || 'Unknown error'); errEl.style.display = 'block'; }
+                if (btn) { btn.disabled = false; btn.innerText = '🔔 Enable Notifications'; }
+            }
+        };
+
+        window.notifGateLater = () => {
+            const overlay = document.getElementById('notif-gate-overlay');
+            if (overlay) { overlay.style.opacity = '0'; setTimeout(() => overlay.style.display = 'none', 400); }
         };
 
         const init = async () => {
@@ -2799,6 +2883,7 @@
                 setImgSrc('app-dynamic-logo-large', logoSrc);
                 document.getElementById('app-dynamic-logo-large').classList.remove('hidden');
                 document.getElementById('app-default-logo-large').classList.add('hidden');
+                if (globalData.config && globalData.config.appName) updateSplashTitle(globalData.config.appName);
             });
 
             onAuthStateChanged(auth, async (user) => {
@@ -2810,6 +2895,8 @@
                         if(snap.exists()) {
                             setupRealtimeData();
                             window.routeFromNotificationHash();
+                            hideSplash();
+                            setTimeout(showNotifGateIfNeeded, 1500);
                         } else {
                             pendingGoogleUser = user;
                             document.getElementById('onboard-name').value = user.displayName || '';
@@ -2825,6 +2912,7 @@
                         console.error("Failed to fetch user doc: ", e);
                     }
                 } else {
+                    hideSplash();
                     window.switchView('view-auth');
                 }
             });
@@ -2935,12 +3023,12 @@
                 }
                 stats[r.studentId].xp += r.score;
             });
-            // Apply admin XP overrides — season tab uses only earned XP (no admin adj)
-            if (!useSeason) {
+            // Apply admin XP overrides — season only, all-time top uses earned XP only
+            if (useSeason) {
                 Object.values(stats).forEach(s => { s.xp = Math.max(0, s.xp + s.xpOverride); });
             }
-            // Also include students who have a positive override but no exam results yet
-            if (!useSeason) {
+            // Also include students who have a positive override but no exam results yet (season only)
+            if (useSeason) {
                 Object.values(globalData.users).forEach(u => {
                     if (!u.uid && !stats[u.id || '']) return;
                     const uid = u.uid || Object.keys(globalData.users).find(k => globalData.users[k] === u);
@@ -3958,108 +4046,110 @@
         };
 
         window.submitExam = async (cheatingFlagOverride = false) => {
-            if(!activeSession || activeSession.terminating) return;
-            // Lock input IMMEDIATELY, synchronously, before any grading or async Firestore work
-            // begins — this is what guarantees "further input is locked" the instant termination
-            // starts, not just once the (async) submission has actually finished.
+            if (!activeSession || activeSession.terminating) return;
+
+            // ── LOCK INPUT immediately (synchronous) ──────────────────────────
+            // Must happen before any async work so the student cannot change answers
+            // while the submission is in flight.
             activeSession.terminating = true;
             document.getElementById('exam-lock-overlay')?.classList.remove('hidden-view');
 
             clearInterval(activeSession.intervalId);
-            if(activeSession.graceTimerId) clearInterval(activeSession.graceTimerId);
+            if (activeSession.graceTimerId) clearInterval(activeSession.graceTimerId);
             activeSession.graceDeadline = null;
-            if(activeSession.saveIntervalId) clearInterval(activeSession.saveIntervalId);
-            if(devToolsInterval) { clearInterval(devToolsInterval); devToolsInterval = null; }
+            if (activeSession.saveIntervalId) clearInterval(activeSession.saveIntervalId);
+            if (devToolsInterval) { clearInterval(devToolsInterval); devToolsInterval = null; }
             document.getElementById('grace-period-overlay').classList.add('hidden-view');
             document.getElementById('cheat-warning-overlay').classList.add('hidden-view');
             document.body.classList.remove('anti-cheat-active');
-            clearGraceNotification(); // belt-and-suspenders: covers every path that ends the exam
-            
-            // Gracefully exit fullscreen if possible
+            clearGraceNotification();
+
             if (document.fullscreenElement) {
-                document.exitFullscreen().catch(err => console.log(err));
+                document.exitFullscreen().catch(() => {});
             }
-            
-            const wasCheating = cheatingFlagOverride || activeSession.cheatingFlagged || false;
-            
-            let xpEarned = 0;
-            const evaluatedAnswers = activeSession.questions.map((q, i) => {
-                const userAns = activeSession.userAnswers[i] || null;
-                let isCorrect = false;
 
-                if (q.type === 'mcq') {
-                    isCorrect = userAns === q.correct;
-                } else if (q.type === 'truefalse') {
-                    isCorrect = userAns === q.correct;
-                } else if (q.type === 'fill') {
-                    // Handle both old (string) and new (object with blanks) formats
-                    if (typeof userAns === 'object' && userAns !== null) {
-                        // New format: { blankId: answer, ... }
-                        const blanks = q.blanks || [];
-                        const correctAnswers = q.correct || {};
-                        isCorrect = blanks.every(blank => {
-                            const userAnswer = (userAns[blank] || '').toString().toLowerCase().trim();
-                            const correctAnswer = (correctAnswers[blank] || '').toString().toLowerCase().trim();
-                            return userAnswer === correctAnswer;
-                        });
-                    } else {
-                        // Old format: simple string
-                        isCorrect = (userAns || '').toString().toLowerCase().trim() === q.correct.toString().toLowerCase().trim();
-                    }
-                } else if (q.type === 'match') {
-                    isCorrect = true;
-                    for(let k of Object.keys(q.pairs)) {
-                        if(!userAns || userAns[k] !== q.pairs[k]) isCorrect = false;
-                    }
-                }
+            // ── COLLECT RAW ANSWERS (NO grading here — server does all grading) ──
+            // The front-end never sees correct answers and never calculates scores.
+            // All it does is package up what the user typed/selected and send it to
+            // the Cloud Function. The server grades, saves to Firestore, and returns
+            // the result. This makes it impossible to cheat by editing JS in DevTools.
+            const rawAnswers = activeSession.questions.map((q, i) => ({
+                questionIndex: i,
+                questionType: q.type,
+                userAnswer: activeSession.userAnswers[i] ?? null
+                // correctAns is deliberately NOT included — server has it from Firestore
+            }));
 
-                if(isCorrect) xpEarned += 10;
-                return { type: q.type, q: q.q, userAns, correctAns: (q.type === 'match' ? q.pairs : q.correct), isCorrect };
-            });
-
-            const resultDoc = {
-                id: 'res_' + Date.now(),
-                testId: activeSession.quizId,
-                studentId: currentUser.uid,
-                score: xpEarned,
-                totalPossible: activeSession.questions.length * 10,
-                details: evaluatedAnswers,
-                duration: activeSession.timerSecs,
-                violations: activeSession.violations || [],
-                cheatingFlagged: wasCheating,
-                cheatAttemptCount: cheatAttempts,
-                timestamp: Date.now()
+            const payload = {
+                quizId:           activeSession.quizId,
+                rawAnswers:       rawAnswers,
+                timeTakenSecs:    activeSession.timerSecs,
+                cheatingFlagged:  cheatingFlagOverride || activeSession.cheatingFlagged || false,
+                cheatAttemptCount: cheatAttempts || 0,
+                violations:       activeSession.violations || []
             };
 
             const savedTitle = activeSession.title;
+            const savedQuestionCount = activeSession.questions.length;
             activeSession = null;
             clearProgress();
 
+            // ── CALL CLOUD FUNCTION ───────────────────────────────────────────
+            // The server independently fetches the quiz from Firestore, grades every
+            // answer, saves the result document, and returns {score, totalPossible,
+            // details, resultId} — nothing sensitive travels back down.
             try {
                 const oldLb = getLeaderboard();
-                const oldRankObj = oldLb.findIndex(u => u.id === currentUser.uid);
-                const oldRankNum = oldRankObj >= 0 ? oldRankObj + 1 : 999;
-                
+                const oldRankNum = (() => {
+                    const idx = oldLb.findIndex(u => u.id === currentUser.uid);
+                    return idx >= 0 ? idx + 1 : 999;
+                })();
                 const oldMyResults = globalData.results.filter(r => r.studentId === currentUser.uid);
                 const myDoc = globalData.users[currentUser.uid] || {};
                 const oldTotalXp = Math.max(0, oldMyResults.reduce((s, r) => s + r.score, 0) + (myDoc.xpOverride || 0));
                 const oldLevel = getRankData(oldTotalXp);
 
-                await setDoc(getPublicDoc('exam_results', resultDoc.id), resultDoc);
+                // Call the gradeExam Cloud Function
+                const gradeExamFn = httpsCallable(functions, 'gradeExam');
+                const response = await gradeExamFn(payload);
+                const { score: xpEarned, totalPossible, details: evaluatedAnswers, resultId } = response.data;
 
-                globalData.results.push(resultDoc);
+                // Add to local cache so the leaderboard updates instantly without waiting
+                // for the Firestore onSnapshot to come back
+                const syntheticResult = {
+                    id: resultId,
+                    testId: payload.quizId,
+                    studentId: currentUser.uid,
+                    score: xpEarned,
+                    totalPossible,
+                    details: evaluatedAnswers,
+                    timestamp: Date.now()
+                };
+                globalData.results.push(syntheticResult);
+
                 const newLb = getLeaderboard();
                 const newRankNum = newLb.findIndex(u => u.id === currentUser.uid) + 1;
-                const newTotalXp = oldTotalXp + xpEarned; // override already in oldTotalXp
+                const newTotalXp = oldTotalXp + xpEarned;
                 const newLevel = getRankData(newTotalXp);
 
-                const promotedRank = newRankNum < oldRankNum;
+                const promotedRank  = newRankNum < oldRankNum;
                 const promotedLevel = newLevel.title !== oldLevel.title;
 
-                showAchievementPopup(savedTitle, xpEarned, newRankNum, newLevel, (promotedRank || promotedLevel), resultDoc.totalPossible, wasCheating);
+                showAchievementPopup(
+                    savedTitle, xpEarned, newRankNum, newLevel,
+                    (promotedRank || promotedLevel), totalPossible, payload.cheatingFlagged
+                );
 
-            } catch(e) {
-                alert("Error saving results. Check your connection.");
+            } catch (e) {
+                console.error('gradeExam error:', e);
+                const msg = e?.code === 'functions/unauthenticated'
+                    ? 'You must be logged in to submit an exam.'
+                    : e?.code === 'functions/already-exists'
+                    ? 'You have already completed this exam.'
+                    : e?.code === 'functions/not-found'
+                    ? 'This exam no longer exists.'
+                    : e?.message || 'Unknown error';
+                alert('Could not submit exam: ' + msg + '\nPlease check your connection and try again.');
             }
         };
 
@@ -5842,5 +5932,115 @@
 
         window.onload = init;
     </script>
+
+    <!-- ===== LOGO SPLASH SCREEN ===== -->
+    <div id="splash-screen" style="
+        position:fixed; inset:0; z-index:9999;
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        transition: opacity 0.6s ease, visibility 0.6s ease;
+    ">
+        <div id="splash-logo-wrap" style="
+            width:120px; height:120px; border-radius:32px; overflow:hidden;
+            background:white; display:flex; align-items:center; justify-content:center;
+            box-shadow: 0 0 0 0 rgba(255,255,255,0.4);
+            animation: splashPulse 1.8s ease-in-out infinite, splashBounceIn 0.7s cubic-bezier(0.16,1,0.3,1) forwards;
+        ">
+            <img id="splash-logo-img" src="logo.jpeg" alt="Logo"
+                onerror="this.style.display='none'; document.getElementById('splash-logo-fallback').style.display='flex';"
+                style="width:100%; height:100%; object-fit:cover;">
+            <div id="splash-logo-fallback" style="display:none; width:100%; height:100%; background:#4f46e5; align-items:center; justify-content:center;">
+                <svg style="width:60px;height:60px;color:white;" fill="none" stroke="white" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                </svg>
+            </div>
+        </div>
+        <div style="
+            margin-top:24px; color:white; font-family:'Plus Jakarta Sans',sans-serif;
+            font-size:22px; font-weight:900; letter-spacing:-0.5px;
+            animation: splashFadeUp 0.7s 0.3s cubic-bezier(0.16,1,0.3,1) both;
+        " id="splash-title">Way of Light</div>
+        <div style="
+            margin-top:8px; color:rgba(255,255,255,0.55);
+            font-family:'Plus Jakarta Sans',sans-serif; font-size:13px; font-weight:600;
+            animation: splashFadeUp 0.7s 0.5s cubic-bezier(0.16,1,0.3,1) both;
+        ">Loading…</div>
+    </div>
+    <style>
+        @keyframes splashBounceIn {
+            from { opacity:0; transform:scale(0.6); }
+            to   { opacity:1; transform:scale(1); }
+        }
+        @keyframes splashFadeUp {
+            from { opacity:0; transform:translateY(16px); }
+            to   { opacity:1; transform:translateY(0); }
+        }
+        @keyframes splashPulse {
+            0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.35); }
+            50%      { box-shadow: 0 0 0 18px rgba(255,255,255,0); }
+        }
+    </style>
+
+    <!-- ===== NOTIFICATION PERMISSION OVERLAY ===== -->
+    <!-- Shown once after login if the user hasn't subscribed yet. Cannot be skipped — only 
+         "Enable" (subscribes) or "Later" (re-shows on next login) are offered. -->
+    <div id="notif-gate-overlay" style="
+        display:none; position:fixed; inset:0; z-index:9000;
+        background:rgba(15,23,42,0.92); backdrop-filter:blur(10px);
+        align-items:center; justify-content:center; padding:20px;
+    ">
+        <div style="
+            background:white; border-radius:28px; width:100%; max-width:380px;
+            overflow:hidden; box-shadow:0 40px 80px rgba(0,0,0,0.5);
+            animation: splashBounceIn 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+            font-family:'Plus Jakarta Sans',sans-serif;
+        ">
+            <!-- Header gradient -->
+            <div style="background:linear-gradient(135deg,#312e81,#4f46e5); padding:28px 24px 20px; text-align:center;">
+                <div style="font-size:48px; margin-bottom:8px;">🔔</div>
+                <div style="color:white; font-size:20px; font-weight:900;">Stay in the Loop!</div>
+                <div style="color:rgba(255,255,255,0.75); font-size:13px; font-weight:500; margin-top:6px; line-height:1.5;">
+                    Get instant alerts for new tests, seasons, study material & winner announcements — even when the app is closed.
+                </div>
+            </div>
+            <!-- Body -->
+            <div style="padding:20px 24px 24px;">
+                <div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px;">
+                    <div style="display:flex; align-items:center; gap:10px; background:#f0fdf4; border-radius:12px; padding:12px;">
+                        <span style="font-size:20px;">📝</span>
+                        <span style="font-size:13px; font-weight:700; color:#166534;">New tests published</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; background:#eff6ff; border-radius:12px; padding:12px;">
+                        <span style="font-size:20px;">🏆</span>
+                        <span style="font-size:13px; font-weight:700; color:#1e40af;">Season starts & winner announcements</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px; background:#fdf4ff; border-radius:12px; padding:12px;">
+                        <span style="font-size:20px;">📚</span>
+                        <span style="font-size:13px; font-weight:700; color:#7e22ce;">New study material posted</span>
+                    </div>
+                </div>
+                <div id="notif-gate-error" style="display:none; background:#fef2f2; border:1px solid #fca5a5; color:#991b1b; border-radius:10px; padding:10px 12px; font-size:12px; font-weight:600; margin-bottom:12px;"></div>
+                <button id="notif-gate-enable-btn" onclick="window.notifGateEnable()" style="
+                    width:100%; padding:15px; background:linear-gradient(135deg,#4f46e5,#7c3aed);
+                    color:white; font-size:15px; font-weight:900; border:none; border-radius:14px;
+                    cursor:pointer; margin-bottom:10px; letter-spacing:0.3px;
+                    box-shadow:0 4px 15px rgba(79,70,229,0.4); transition:opacity 0.2s;
+                " onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    🔔 Enable Notifications
+                </button>
+                <button onclick="window.notifGateLater()" style="
+                    width:100%; padding:12px; background:#f1f5f9;
+                    color:#64748b; font-size:13px; font-weight:700; border:none; border-radius:14px;
+                    cursor:pointer; transition:background 0.2s;
+                " onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='#f1f5f9'">
+                    Remind me later
+                </button>
+                <p style="text-align:center; font-size:11px; color:#94a3b8; font-weight:500; margin-top:10px; line-height:1.5;">
+                    You can always change this in your Profile settings.
+                </p>
+            </div>
+        </div>
+    </div>
+
 </body>
 </html>
