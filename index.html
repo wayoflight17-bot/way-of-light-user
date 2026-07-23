@@ -672,6 +672,20 @@
                 </div>
             </div>
 
+            <!-- Following Feed — certificates/award letters from people you follow, Instagram home-style -->
+            <div id="following-feed-section" class="hidden-view">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm3 3h10M7 12h10M7 16h6"/></svg>
+                        From People You Follow
+                    </h3>
+                    <button onclick="window.switchView('view-people')" class="text-xs font-bold text-indigo-500 hover:text-indigo-700">Find more →</button>
+                </div>
+                <div id="following-feed-scroller" class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
             <!-- Main Content Area -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 <div class="lg:col-span-8 space-y-6">
@@ -3687,6 +3701,62 @@
                document.getElementById('view-onboarding').classList.contains('hidden-view')) {
                 window.switchView('view-dashboard');
             }
+
+            renderFollowingFeed();
+        };
+
+        // Shows certificates/award letters from people the current user follows, on the home
+        // dashboard — same idea as Instagram's home feed only ever showing accounts you follow.
+        // A horizontally-scrollable strip so it doesn't push the rest of the dashboard down too
+        // far; tapping a card opens that person's profile straight to their Posts tab.
+        const renderFollowingFeed = () => {
+            const section = document.getElementById('following-feed-section');
+            const scroller = document.getElementById('following-feed-scroller');
+            if (!section || !scroller || !currentUser) return;
+
+            if (myFollowing.size === 0) {
+                section.classList.add('hidden-view');
+                return;
+            }
+
+            const posts = (globalData.certificates || [])
+                .filter(c => c.status !== 'revoked' && myFollowing.has(c.studentId))
+                .sort((a, b) => (b.createdAt || b.issueDate || 0) - (a.createdAt || a.issueDate || 0))
+                .slice(0, 20); // cap the feed to the most recent 20 — this is a preview strip, not the full history
+
+            if (posts.length === 0) {
+                section.classList.add('hidden-view');
+                return;
+            }
+            section.classList.remove('hidden-view');
+
+            scroller.innerHTML = posts.map(c => {
+                const certId = c.certificateId || c.id;
+                const owner = globalData.users[c.studentId] || {};
+                const hasAward = !!c.awardId;
+                const dateStr = (c.createdAt || c.issueDate) ? new Date(c.createdAt || c.issueDate).toLocaleDateString() : '';
+                const PLACE_ICONS = { first: '🥇', second: '🥈', third: '🥉' };
+                const thumbHTML = c.fileType === 'pdf'
+                    ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-4xl">📕</div>`
+                    : `<img src="${c.fileData}" class="w-full aspect-square object-cover bg-slate-100">`;
+
+                return `
+                <button onclick="window.openProfileView('${c.studentId}', 'feed')" class="snap-start shrink-0 w-44 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-left hover:shadow-md transition-shadow">
+                    <div class="relative">
+                        ${thumbHTML}
+                        ${hasAward ? `<div class="absolute top-2 right-2 bg-slate-900/70 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">🏅</div>` : ''}
+                        ${c.winnerPlace ? `<div class="absolute top-2 left-2 text-lg drop-shadow">${PLACE_ICONS[c.winnerPlace] || ''}</div>` : ''}
+                    </div>
+                    <div class="p-3">
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <img src="${owner.avatar || AVATARS[0]}" class="w-5 h-5 rounded-full border border-slate-200 object-cover shrink-0">
+                            <span class="font-black text-slate-800 text-xs truncate">${owner.name || 'Student'}</span>
+                        </div>
+                        <p class="font-bold text-slate-600 text-[11px] leading-snug line-clamp-2">${c.title}</p>
+                        ${dateStr ? `<p class="text-[9px] text-slate-400 font-bold mt-1">${dateStr}</p>` : ''}
+                    </div>
+                </button>`;
+            }).join('');
         };
 
         let tempAvatar = '';
@@ -4627,6 +4697,9 @@
                 if (document.getElementById('view-people') && !document.getElementById('view-people').classList.contains('hidden-view')) {
                     window.renderPeople();
                 }
+                if (document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden-view')) {
+                    renderFollowingFeed();
+                }
                 refreshOpenSocialModal();
             }));
 
@@ -4934,7 +5007,9 @@
             }
 
             updateProfileViewFollowBtn(uid);
-            window.setPvTab('participation');
+            // Coming from the home following-feed means they tapped a certificate/award post
+            // specifically, so land straight on the Posts tab instead of the usual default.
+            window.setPvTab(source === 'feed' ? 'posts' : 'participation');
             ['view-dashboard', 'view-people', 'view-review', 'view-exam', 'view-certificates'].forEach(v => {
                 document.getElementById(v)?.classList.add('hidden-view');
             });
@@ -5772,10 +5847,18 @@
             document.getElementById('wp-season-name').innerText = latest.name || 'Season';
             const winnerListEl = document.getElementById('wp-winners-list');
             const w = latest.winner;
+            // Each place can hold a single winner OR an array of tied/joint winners — getPlaceWinners
+            // normalizes both, and we add one row per person so every tied winner's name and XP
+            // shows correctly instead of the row breaking (showing "undefined") when a place has
+            // more than one winner.
             const rows = [];
-            if (w.first) rows.push({ medal: '🥇', name: w.first.name, xp: w.first.xp, pos: '1st Place' });
-            if (w.second) rows.push({ medal: '🥈', name: w.second.name, xp: w.second.xp, pos: '2nd Place' });
-            if (w.third) rows.push({ medal: '🥉', name: w.third.name, xp: w.third.xp, pos: '3rd Place' });
+            const PLACE_INFO = { first: { medal: '🥇', pos: '1st Place' }, second: { medal: '🥈', pos: '2nd Place' }, third: { medal: '🥉', pos: '3rd Place' } };
+            for (const place of ['first', 'second', 'third']) {
+                const winners = getPlaceWinners(w, place);
+                winners.forEach(winner => {
+                    rows.push({ medal: PLACE_INFO[place].medal, name: winner.name, xp: winner.xp, pos: PLACE_INFO[place].pos });
+                });
+            }
 
             winnerListEl.innerHTML = rows.map(r => `
                 <div class="flex items-center justify-between bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl px-5 py-4">
