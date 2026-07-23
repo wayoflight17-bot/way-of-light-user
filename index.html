@@ -1085,7 +1085,7 @@
     <div id="view-certificates" class="hidden-view fade-in max-w-5xl mx-auto px-4 py-8 space-y-8 app-content-offset">
         <div>
             <h2 class="text-2xl font-black text-slate-900">My Certificates</h2>
-            <p class="text-slate-500 text-sm font-medium mt-1">Each certificate has a unique Certificate ID. Share it — anyone can verify it's genuine and not a duplicate.</p>
+            <p class="text-slate-500 text-sm font-medium mt-1">Each certificate has a unique Certificate ID. Some also come with an award letter — swipe the card to see it. Share either ID and anyone can verify it's genuine.</p>
         </div>
 
         <div id="my-cert-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -1097,40 +1097,15 @@
             <p class="text-sm text-slate-400 mt-1">Your admin will issue certificates here as you earn them.</p>
         </div>
 
-        <div>
-            <h2 class="text-2xl font-black text-slate-900">My Award Letters</h2>
-            <p class="text-slate-500 text-sm font-medium mt-1">Separate from certificates — you may have both for the same achievement.</p>
-        </div>
-
-        <div id="my-award-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <!-- Injected via JS -->
-        </div>
-        <div id="my-award-empty" class="hidden-view text-center py-16 bg-white rounded-3xl border border-slate-200">
-            <div class="text-5xl mb-3">🏅</div>
-            <p class="font-bold text-slate-500">No award letters issued yet</p>
-            <p class="text-sm text-slate-400 mt-1">Your admin will issue award letters here as you earn them.</p>
-        </div>
-
-        <!-- Verify a Certificate -->
+        <!-- Verify a Certificate or Award Letter -->
         <div class="bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-200 shadow-sm">
-            <h3 class="font-black text-lg text-slate-800 mb-1">🔍 Verify a Certificate</h3>
-            <p class="text-sm text-slate-500 mb-5">Enter any Certificate ID to confirm who it genuinely belongs to.</p>
+            <h3 class="font-black text-lg text-slate-800 mb-1">🔍 Verify a Certificate or Award Letter</h3>
+            <p class="text-sm text-slate-500 mb-5">Enter any Certificate ID or Award ID to confirm who it genuinely belongs to.</p>
             <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="verify-cert-input" placeholder="e.g. CERT-2026-0001" onkeydown="if(event.key==='Enter') window.verifyCertificate()" class="flex-1 px-4 py-3.5 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 outline-none font-mono font-bold text-slate-700 tracking-wider uppercase">
+                <input type="text" id="verify-cert-input" placeholder="e.g. CERT-2026-0001 or AWARD-2026-0001" onkeydown="if(event.key==='Enter') window.verifyCertificate()" class="flex-1 px-4 py-3.5 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 outline-none font-mono font-bold text-slate-700 tracking-wider uppercase">
                 <button onclick="window.verifyCertificate()" class="px-6 py-3.5 bg-indigo-600 text-white font-black rounded-xl hover:bg-indigo-700 transition-all shadow-md active:scale-95">Verify</button>
             </div>
             <div id="verify-cert-result" class="mt-5"></div>
-        </div>
-
-        <!-- Verify an Award Letter -->
-        <div class="bg-white p-6 sm:p-8 rounded-[2rem] border border-slate-200 shadow-sm">
-            <h3 class="font-black text-lg text-slate-800 mb-1">🔍 Verify an Award Letter</h3>
-            <p class="text-sm text-slate-500 mb-5">Enter any Award ID to confirm who it genuinely belongs to.</p>
-            <div class="flex flex-col sm:flex-row gap-3">
-                <input type="text" id="verify-award-input" placeholder="e.g. AWARD-2026-0001" onkeydown="if(event.key==='Enter') window.verifyAwardLetter()" class="flex-1 px-4 py-3.5 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-violet-500 outline-none font-mono font-bold text-slate-700 tracking-wider uppercase">
-                <button onclick="window.verifyAwardLetter()" class="px-6 py-3.5 bg-violet-600 text-white font-black rounded-xl hover:bg-violet-700 transition-all shadow-md active:scale-95">Verify</button>
-            </div>
-            <div id="verify-award-result" class="mt-5"></div>
         </div>
     </div>
 
@@ -1725,7 +1700,7 @@
         let userData = null; 
         let pendingGoogleUser = null; 
         let authMethod = null;
-        let globalData = { users: {}, results: [], quizzes: [], config: {}, seasons: [], certificates: [], awardLetters: [], studyContent: [], categoryCovers: [] };
+        let globalData = { users: {}, results: [], quizzes: [], config: {}, seasons: [], certificates: [], studyContent: [], categoryCovers: [] };
         let activeSession = null;
 
         // ===========================================================================
@@ -2534,7 +2509,6 @@
                 // Render certificates when switching to certificates view
                 if (id === 'view-certificates') {
                     window.renderMyCertificates();
-                    window.renderMyAwardLetters();
                 }
                 // Render seasons list when switching to seasons view (always start at the
                 // overview list, same pattern as re-entering the Study tab)
@@ -3164,13 +3138,6 @@
                     window.renderMyCertificates();
                 }
                 if (viewingProfileUid) renderProfileCertSection(viewingProfileUid);
-            }));
-
-            unsubscribes.push(onSnapshot(getPublicCol('exam_award_letters'), snapshot => {
-                globalData.awardLetters = snapshot.empty ? [] : snapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                if (!document.getElementById('view-certificates').classList.contains('hidden-view')) {
-                    window.renderMyAwardLetters();
-                }
             }));
 
             unsubscribes.push(onSnapshot(getPublicCol('study_content'), snapshot => {
@@ -4637,7 +4604,6 @@
         //   post_likes/{postId}/likes/{uid}           → { uid, name, likedAt }
         //   post_comments/{postId}/comments/{commentId} → { uid, name, avatar, text, createdAt }
         const postIdForCert = (certId) => `cert_${certId}`;
-        const postIdForAward = (awardId) => `award_${awardId}`;
         const getPostLikesCol = (postId) => collection(db, 'artifacts', appId, 'public', 'data', 'post_likes', postId, 'likes');
         const getPostLikeDoc = (postId, uid) => doc(db, 'artifacts', appId, 'public', 'data', 'post_likes', postId, 'likes', uid);
         const getPostCommentsCol = (postId) => collection(db, 'artifacts', appId, 'public', 'data', 'post_comments', postId, 'comments');
@@ -5179,6 +5145,105 @@
         // ========================
         // CERTIFICATES
         // ========================
+        // Builds one swipeable card's inner HTML for a certificate record. Page 1 is always the
+        // certificate; page 2 (award letter) only exists if this record actually has one — so a
+        // certificate issued without an award letter is simply a single, non-swiping page, and one
+        // issued with an award letter becomes a genuine two-page swipe, exactly like an Instagram
+        // post with multiple photos. Uses native CSS scroll-snap so the swipe gesture is the
+        // browser's own smooth touch scrolling — no custom drag/touch JS needed.
+        const buildCertAwardSwipeCard = (c) => {
+            const id = c.certificateId || c.id;
+            const revoked = c.status === 'revoked';
+            const dateStr = c.issueDate ? new Date(c.issueDate).toLocaleDateString() : '—';
+            const hasAward = !!c.awardId;
+
+            const PLACE_MAP = { first: { medal: '🥇', label: '1st Place Winner', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800' }, second: { medal: '🥈', label: '2nd Place Winner', bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-700' }, third: { medal: '🥉', label: '3rd Place Winner', bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800' } };
+            let winnerBadgeHTML = '';
+            if (c.winnerPlace && !revoked) {
+                const pm = PLACE_MAP[c.winnerPlace];
+                if (pm) {
+                    winnerBadgeHTML = `<div class="flex items-center gap-2 px-3 py-2 ${pm.bg} border ${pm.border} rounded-xl mt-2">
+                        <span class="text-lg">${pm.medal}</span>
+                        <div>
+                            <div class="font-black ${pm.text} text-xs">${pm.label}</div>
+                            ${c.winnerSeason ? `<div class="text-[10px] font-bold text-slate-500">${c.winnerSeason}</div>` : ''}
+                        </div>
+                    </div>`;
+                }
+            }
+
+            const stripGradient = revoked ? 'from-slate-300 via-slate-400 to-slate-300' : c.winnerPlace === 'first' ? 'from-amber-400 via-yellow-400 to-amber-500' : c.winnerPlace === 'second' ? 'from-slate-300 via-slate-400 to-slate-300' : c.winnerPlace === 'third' ? 'from-orange-400 via-amber-400 to-orange-400' : 'from-amber-400 via-yellow-500 to-amber-400';
+
+            // ── Page 1: Certificate ──
+            const certPage = `
+            <div class="snap-center shrink-0 w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">${c.winnerPlace === 'first' ? '🥇' : c.winnerPlace === 'second' ? '🥈' : c.winnerPlace === 'third' ? '🥉' : '🎓'}</div>
+                        ${revoked
+                            ? `<span class="px-2 py-1 bg-rose-100 text-rose-700 text-[10px] font-black rounded uppercase">Revoked</span>`
+                            : `<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded uppercase">Active</span>`}
+                    </div>
+                    <div class="flex items-center gap-1.5 mb-1">
+                        <span class="text-[10px] font-black text-amber-500 uppercase tracking-widest">🎓 Certificate</span>
+                    </div>
+                    <h4 class="font-black text-lg text-slate-800 mb-1 leading-snug">${c.title}</h4>
+                    <p class="text-xs text-slate-400 font-bold mb-3">Issued ${dateStr}</p>
+                    ${winnerBadgeHTML}
+                    <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 mt-3 mb-4">
+                        <span class="font-mono font-black text-slate-700 text-sm tracking-wider truncate">${id}</span>
+                        <button onclick="window.copyCertId('${id}')" class="text-indigo-500 hover:text-indigo-700 text-xs font-bold shrink-0 ml-2">Copy</button>
+                    </div>
+                    <button onclick="window.viewCertFile('${id}')" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-colors text-sm">View Certificate</button>
+                </div>
+            </div>`;
+
+            // ── Page 2: Award Letter (only if this record actually has one) ──
+            const awardPage = hasAward ? `
+            <div class="snap-center shrink-0 w-full">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="w-11 h-11 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center text-xl">🏅</div>
+                        ${revoked
+                            ? `<span class="px-2 py-1 bg-rose-100 text-rose-700 text-[10px] font-black rounded uppercase">Revoked</span>`
+                            : `<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded uppercase">Active</span>`}
+                    </div>
+                    <div class="flex items-center gap-1.5 mb-1">
+                        <span class="text-[10px] font-black text-violet-500 uppercase tracking-widest">🏅 Award Letter</span>
+                    </div>
+                    <h4 class="font-black text-lg text-slate-800 mb-1 leading-snug">${c.awardTitle || 'Award Letter'}</h4>
+                    <p class="text-xs text-slate-400 font-bold mb-3">For the same achievement</p>
+                    ${winnerBadgeHTML}
+                    <div class="flex items-center justify-between bg-violet-50 border border-violet-200 rounded-xl px-3 py-2.5 mt-3 mb-4">
+                        <span class="font-mono font-black text-violet-700 text-sm tracking-wider truncate">${c.awardId}</span>
+                        <button onclick="window.copyAwardId('${c.awardId}')" class="text-violet-500 hover:text-violet-700 text-xs font-bold shrink-0 ml-2">Copy</button>
+                    </div>
+                    <button onclick="window.viewAwardFile('${id}')" class="w-full py-3 bg-violet-600 text-white font-bold rounded-xl hover:bg-violet-700 transition-colors text-sm">View Award Letter</button>
+                </div>
+            </div>` : '';
+
+            return `
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden ${revoked ? 'opacity-60' : ''}">
+                <div class="h-2 bg-gradient-to-r ${stripGradient}"></div>
+                <div class="relative">
+                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none">
+                        ${certPage}
+                        ${awardPage}
+                    </div>
+                    ${hasAward ? `
+                    <div class="flex justify-center gap-1.5 pb-3">
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                    </div>
+                    <div class="absolute top-1/2 right-2 -translate-y-1/2 pointer-events-none opacity-40">
+                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                    </div>
+                    <div class="absolute top-3 right-3 bg-slate-900/70 text-white text-[9px] font-black px-2 py-1 rounded-full pointer-events-none">Swipe for Award →</div>
+                    ` : ''}
+                </div>
+            </div>`;
+        };
+
         window.renderMyCertificates = () => {
             const grid = document.getElementById('my-cert-grid');
             const empty = document.getElementById('my-cert-empty');
@@ -5195,49 +5260,9 @@
             }
             empty.classList.add('hidden-view');
 
-            grid.innerHTML = myCerts.map(c => {
-                const id = c.certificateId || c.id;
-                const revoked = c.status === 'revoked';
-                const dateStr = c.issueDate ? new Date(c.issueDate).toLocaleDateString() : '—';
-
-                // Winner placement badge
-                let winnerBadgeHTML = '';
-                if (c.winnerPlace && !revoked) {
-                    const PLACE_MAP = { first: { medal: '🥇', label: '1st Place Winner', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800' }, second: { medal: '🥈', label: '2nd Place Winner', bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-700' }, third: { medal: '🥉', label: '3rd Place Winner', bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800' } };
-                    const pm = PLACE_MAP[c.winnerPlace];
-                    if (pm) {
-                        winnerBadgeHTML = `<div class="flex items-center gap-2 px-3 py-2 ${pm.bg} border ${pm.border} rounded-xl mt-2">
-                            <span class="text-lg">${pm.medal}</span>
-                            <div>
-                                <div class="font-black ${pm.text} text-xs">${pm.label}</div>
-                                ${c.winnerSeason ? `<div class="text-[10px] font-bold text-slate-500">${c.winnerSeason}</div>` : ''}
-                            </div>
-                        </div>`;
-                    }
-                }
-
-                return `
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden ${revoked ? 'opacity-60' : ''}">
-                    <div class="h-2 bg-gradient-to-r ${revoked ? 'from-slate-300 via-slate-400 to-slate-300' : c.winnerPlace === 'first' ? 'from-amber-400 via-yellow-400 to-amber-500' : c.winnerPlace === 'second' ? 'from-slate-300 via-slate-400 to-slate-300' : c.winnerPlace === 'third' ? 'from-orange-400 via-amber-400 to-orange-400' : 'from-amber-400 via-yellow-500 to-amber-400'}"></div>
-                    <div class="p-6">
-                        <div class="flex justify-between items-start mb-3">
-                            <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">${c.winnerPlace === 'first' ? '🥇' : c.winnerPlace === 'second' ? '🥈' : c.winnerPlace === 'third' ? '🥉' : '🎓'}</div>
-                            ${revoked
-                                ? `<span class="px-2 py-1 bg-rose-100 text-rose-700 text-[10px] font-black rounded uppercase">Revoked</span>`
-                                : `<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded uppercase">Active</span>`}
-                        </div>
-                        <h4 class="font-black text-lg text-slate-800 mb-1 leading-snug">${c.title}</h4>
-                        <p class="text-xs text-slate-400 font-bold mb-3">Issued ${dateStr}</p>
-                        ${winnerBadgeHTML}
-                        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 mt-3 mb-4">
-                            <span class="font-mono font-black text-slate-700 text-sm tracking-wider truncate">${id}</span>
-                            <button onclick="window.copyCertId('${id}')" class="text-indigo-500 hover:text-indigo-700 text-xs font-bold shrink-0 ml-2">Copy</button>
-                        </div>
-                        <button onclick="window.viewCertFile('${id}')" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-colors text-sm">View Certificate</button>
-                    </div>
-                </div>`;
-            }).join('');
+            grid.innerHTML = myCerts.map(c => buildCertAwardSwipeCard(c)).join('');
         };
+
 
         // Compact "verified certificates" strip shown on a user's public profile (active certs only)
         const renderProfileCertSection = (uid) => {
@@ -5267,9 +5292,11 @@
             }).join('');
         };
 
-        // ========== INSTAGRAM-STYLE POSTS FEED (certificates + award letters) ==========
-        // Each certificate/award letter a student has becomes one "post": image, like button,
-        // like count, and a comment thread — same interaction model as a normal social post.
+        // ========== INSTAGRAM-STYLE POSTS FEED (certificates, with award letters as a swipe) ==========
+        // Each certificate RECORD is one post — if it also has an award letter, the image area is a
+        // two-page swipeable card (cert first, award second), matching a normal Instagram post with
+        // multiple photos. Likes and comments are shared across the whole post, not split per page,
+        // since they're both part of the same achievement being celebrated.
         // Only live listeners for whichever post is currently expanded are kept active, so
         // browsing a profile with many posts doesn't open dozens of simultaneous subscriptions.
         let postsFeedUnsubscribes = []; // active like/comment listeners for the currently-open profile's feed
@@ -5281,13 +5308,9 @@
         };
 
         const buildProfilePostsList = (uid) => {
-            const certs = (globalData.certificates || [])
+            return (globalData.certificates || [])
                 .filter(c => c.studentId === uid && c.status !== 'revoked')
-                .map(c => ({ kind: 'cert', id: c.certificateId || c.id, data: c, createdAt: c.createdAt || c.issueDate || 0 }));
-            const awards = (globalData.awardLetters || [])
-                .filter(a => a.studentId === uid && a.status !== 'revoked')
-                .map(a => ({ kind: 'award', id: a.awardId || a.id, data: a, createdAt: a.createdAt || a.issueDate || 0 }));
-            return [...certs, ...awards].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                .sort((a, b) => (b.createdAt || b.issueDate || 0) - (a.createdAt || a.issueDate || 0));
         };
 
         window.renderProfilePostsFeed = (uid) => {
@@ -5308,17 +5331,20 @@
 
             const owner = globalData.users[uid] || {};
 
-            feedEl.innerHTML = posts.map(p => {
-                const postId = p.kind === 'cert' ? postIdForCert(p.id) : postIdForAward(p.id);
-                const title = p.data.title;
-                const dateStr = (p.createdAt) ? new Date(p.createdAt).toLocaleDateString() : '';
-                const kindLabel = p.kind === 'cert' ? '🎓 Certificate' : '🏅 Award Letter';
-                const winnerPlace = p.data.winnerPlace;
+            feedEl.innerHTML = posts.map(c => {
+                const certId = c.certificateId || c.id;
+                const postId = postIdForCert(certId); // one shared like/comment thread for the whole post
+                const hasAward = !!c.awardId;
+                const dateStr = (c.createdAt || c.issueDate) ? new Date(c.createdAt || c.issueDate).toLocaleDateString() : '';
+                const winnerPlace = c.winnerPlace;
                 const PLACE_ICONS = { first: '🥇', second: '🥈', third: '🥉' };
 
-                const imgHTML = p.data.fileType === 'pdf'
-                    ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl">📕</div>`
-                    : `<img src="${p.data.fileData}" class="w-full aspect-square object-cover bg-slate-100">`;
+                const certImgHTML = c.fileType === 'pdf'
+                    ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
+                    : `<img src="${c.fileData}" class="w-full aspect-square object-cover bg-slate-100 shrink-0 snap-center">`;
+                const awardImgHTML = hasAward ? (c.awardFileType === 'pdf'
+                    ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
+                    : `<img src="${c.awardFileData}" class="w-full aspect-square object-cover bg-slate-100 shrink-0 snap-center">`) : '';
 
                 return `
                 <div class="py-5 post-card" data-post-id="${postId}">
@@ -5326,14 +5352,23 @@
                         <img src="${owner.avatar || AVATARS[0]}" class="w-8 h-8 rounded-full border border-slate-200 object-cover">
                         <div class="min-w-0 flex-1">
                             <div class="font-black text-slate-800 text-sm truncate">${owner.name || 'Student'}</div>
-                            <div class="text-[10px] text-slate-400 font-bold">${kindLabel}${dateStr ? ` · ${dateStr}` : ''}</div>
+                            <div class="text-[10px] text-slate-400 font-bold">🎓 Certificate${hasAward ? ' + 🏅 Award Letter' : ''}${dateStr ? ` · ${dateStr}` : ''}</div>
                         </div>
                         ${winnerPlace ? `<span class="text-xl">${PLACE_ICONS[winnerPlace] || ''}</span>` : ''}
                     </div>
 
-                    <button onclick="window.${p.kind === 'cert' ? 'viewCertFile' : 'viewAwardFile'}('${p.id}')" class="block w-full rounded-2xl overflow-hidden border border-slate-100">
-                        ${imgHTML}
-                    </button>
+                    <div class="relative rounded-2xl overflow-hidden border border-slate-100">
+                        <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none">
+                            <button onclick="window.viewCertFile('${certId}')" class="block w-full shrink-0 snap-center">${certImgHTML}</button>
+                            ${hasAward ? `<button onclick="window.viewAwardFile('${certId}')" class="block w-full shrink-0 snap-center">${awardImgHTML}</button>` : ''}
+                        </div>
+                        ${hasAward ? `
+                        <div class="absolute top-3 right-3 bg-slate-900/70 text-white text-[9px] font-black px-2 py-1 rounded-full pointer-events-none">Swipe for Award →</div>
+                        <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none">
+                            <span class="w-1.5 h-1.5 rounded-full bg-white/90"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-white/50"></span>
+                        </div>` : ''}
+                    </div>
 
                     <div class="px-1 mt-3">
                         <div class="flex items-center gap-4 mb-2">
@@ -5345,7 +5380,7 @@
                             </button>
                         </div>
                         <div id="like-count-${postId}" class="font-black text-slate-800 text-sm mb-1">0 likes</div>
-                        <div class="font-bold text-slate-700 text-sm mb-2"><span class="font-black">${owner.name || 'Student'}</span> ${title}</div>
+                        <div class="font-bold text-slate-700 text-sm mb-2"><span class="font-black">${owner.name || 'Student'}</span> ${c.title}</div>
 
                         <div id="comments-list-${postId}" class="space-y-2 mb-2"></div>
                         <button onclick="window.toggleCommentsExpanded('${postId}')" id="comments-toggle-${postId}" class="hidden text-xs font-bold text-slate-400 hover:text-slate-600 mb-2"></button>
@@ -5359,8 +5394,8 @@
             }).join('');
 
             // Attach a live like/comment listener per post now that the cards exist in the DOM.
-            posts.forEach(p => {
-                const postId = p.kind === 'cert' ? postIdForCert(p.id) : postIdForAward(p.id);
+            posts.forEach(c => {
+                const postId = postIdForCert(c.certificateId || c.id);
                 postsFeedUnsubscribes.push(onSnapshot(getPostLikesCol(postId), snap => {
                     const likes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
                     postsFeedCache[postId] = postsFeedCache[postId] || {};
@@ -5493,17 +5528,20 @@
             const resultEl = document.getElementById('verify-cert-result');
             const query = (input.value || '').trim().toUpperCase();
             if (!query) {
-                resultEl.innerHTML = `<p class="text-sm text-slate-400 font-bold text-center py-2">Enter a Certificate ID above.</p>`;
+                resultEl.innerHTML = `<p class="text-sm text-slate-400 font-bold text-center py-2">Enter a Certificate ID or Award ID above.</p>`;
                 return;
             }
-            const cert = (globalData.certificates || []).find(c => (c.certificateId || c.id || '').toUpperCase() === query);
+            // A single lookup box now checks both ID types, since award letters live on the same
+            // certificate record — whichever ID someone has, this finds the right record either way.
+            const matchedByAward = (globalData.certificates || []).find(c => (c.awardId || '').toUpperCase() === query);
+            const cert = matchedByAward || (globalData.certificates || []).find(c => (c.certificateId || c.id || '').toUpperCase() === query);
             if (!cert) {
                 resultEl.innerHTML = `
                 <div class="flex items-center gap-3 p-4 bg-rose-50 border border-rose-200 rounded-2xl">
                     <span class="text-2xl">❌</span>
                     <div>
                         <div class="font-black text-rose-700">Not Found</div>
-                        <div class="text-xs text-rose-500 font-bold">No certificate matches this ID. It may be invalid, mistyped, or fake — that's exactly what this check is for.</div>
+                        <div class="text-xs text-rose-500 font-bold">No certificate or award letter matches this ID. It may be invalid, mistyped, or fake — that's exactly what this check is for.</div>
                     </div>
                 </div>`;
                 return;
@@ -5512,6 +5550,7 @@
             const id = cert.certificateId || cert.id;
             const revoked = cert.status === 'revoked';
             const dateStr = cert.issueDate ? new Date(cert.issueDate).toLocaleDateString() : '—';
+            const hasAward = !!cert.awardId;
 
             // ── Find winner placement across all seasons ──
             const PLACE_MAP = [
@@ -5554,14 +5593,30 @@
                 }
             }
 
+            // ── Award letter file preview, if this record has one ──
+            let awardPreviewHTML = '';
+            if (hasAward && cert.awardFileData) {
+                if (cert.awardFileType === 'pdf') {
+                    awardPreviewHTML = `
+                    <div class="cert-protected-wrapper rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+                        <iframe src="${cert.awardFileData}" class="w-full h-64 sm:h-80 rounded-2xl bg-white pointer-events-none"></iframe>
+                    </div>`;
+                } else {
+                    awardPreviewHTML = `
+                    <div class="cert-protected-wrapper rounded-2xl overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center bg-slate-50 p-2">
+                        <img src="${cert.awardFileData}" class="max-h-64 sm:max-h-80 w-full object-contain rounded-xl" ondragstart="return false;">
+                    </div>`;
+                }
+            }
+
             resultEl.innerHTML = `
             <div class="space-y-4">
                 <!-- Status header -->
                 <div class="flex items-center gap-3 p-4 ${revoked ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'} border rounded-2xl">
                     <span class="text-2xl">${revoked ? '⚠️' : '✅'}</span>
                     <div>
-                        <div class="font-black ${revoked ? 'text-rose-700' : 'text-emerald-700'} text-base">${revoked ? 'Revoked Certificate' : 'Valid Certificate'}</div>
-                        <div class="text-xs ${revoked ? 'text-rose-500' : 'text-emerald-600'} font-bold">${revoked ? 'This certificate ID was revoked and is no longer valid.' : 'This certificate ID is genuine and on record.'}</div>
+                        <div class="font-black ${revoked ? 'text-rose-700' : 'text-emerald-700'} text-base">${revoked ? 'Revoked Record' : (matchedByAward ? 'Valid Award Letter' : 'Valid Certificate')}</div>
+                        <div class="text-xs ${revoked ? 'text-rose-500' : 'text-emerald-600'} font-bold">${revoked ? 'This record was revoked and is no longer valid.' : 'This ID is genuine and on record.'}</div>
                     </div>
                 </div>
 
@@ -5572,6 +5627,10 @@
                     <div class="col-span-2"><span class="text-slate-400 font-bold block mb-0.5">Certificate Title</span><span class="font-black text-slate-800 text-sm">${cert.title}</span></div>
                     <div><span class="text-slate-400 font-bold block mb-0.5">Issue Date</span><span class="font-black text-slate-800 text-sm">${dateStr}</span></div>
                     <div><span class="text-slate-400 font-bold block mb-0.5">Certificate ID</span><span class="font-black text-slate-800 text-sm font-mono">${id}</span></div>
+                    ${hasAward ? `
+                    <div class="col-span-2"><span class="text-slate-400 font-bold block mb-0.5">Award Title</span><span class="font-black text-slate-800 text-sm">${cert.awardTitle || 'Award Letter'}</span></div>
+                    <div class="col-span-2"><span class="text-slate-400 font-bold block mb-0.5">Award ID</span><span class="font-black text-slate-800 text-sm font-mono">${cert.awardId}</span></div>
+                    ` : ''}
                 </div>
 
                 ${winnerBadgeHTML ? `
@@ -5586,6 +5645,13 @@
                 <div>
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 mb-2">📄 Certificate Preview</p>
                     ${certPreviewHTML}
+                </div>` : ''}
+
+                ${awardPreviewHTML ? `
+                <!-- Award letter preview -->
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 mb-2">🏅 Award Letter Preview</p>
+                    ${awardPreviewHTML}
                 </div>` : ''}
             </div>`;
         };
@@ -5636,88 +5702,29 @@
         };
 
         // ========== AWARD LETTERS (student-facing) ==========
-        // Mirrors the certificate gallery/viewer/verify pattern exactly — a separate, parallel
-        // collection so a student can hold both a certificate and an award letter for the same
-        // achievement, each with its own protected preview and owner-only download.
-        window.renderMyAwardLetters = () => {
-            const grid = document.getElementById('my-award-grid');
-            const empty = document.getElementById('my-award-empty');
-            if (!grid || !currentUser) return;
-
-            const myAwards = (globalData.awardLetters || [])
-                .filter(a => a.studentId === currentUser.uid)
-                .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-
-            if (myAwards.length === 0) {
-                grid.innerHTML = '';
-                empty.classList.remove('hidden-view');
-                return;
-            }
-            empty.classList.add('hidden-view');
-
-            grid.innerHTML = myAwards.map(a => {
-                const id = a.awardId || a.id;
-                const revoked = a.status === 'revoked';
-                const dateStr = a.issueDate ? new Date(a.issueDate).toLocaleDateString() : '—';
-
-                let winnerBadgeHTML = '';
-                if (a.winnerPlace && !revoked) {
-                    const PLACE_MAP = { first: { medal: '🥇', label: '1st Place Winner', bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-800' }, second: { medal: '🥈', label: '2nd Place Winner', bg: 'bg-slate-100', border: 'border-slate-300', text: 'text-slate-700' }, third: { medal: '🥉', label: '3rd Place Winner', bg: 'bg-orange-50', border: 'border-orange-200', text: 'text-orange-800' } };
-                    const pm = PLACE_MAP[a.winnerPlace];
-                    if (pm) {
-                        winnerBadgeHTML = `<div class="flex items-center gap-2 px-3 py-2 ${pm.bg} border ${pm.border} rounded-xl mt-2">
-                            <span class="text-lg">${pm.medal}</span>
-                            <div>
-                                <div class="font-black ${pm.text} text-xs">${pm.label}</div>
-                                ${a.winnerSeason ? `<div class="text-[10px] font-bold text-slate-500">${a.winnerSeason}</div>` : ''}
-                            </div>
-                        </div>`;
-                    }
-                }
-
-                return `
-                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden ${revoked ? 'opacity-60' : ''}">
-                    <div class="h-2 bg-gradient-to-r ${revoked ? 'from-slate-300 via-slate-400 to-slate-300' : a.winnerPlace === 'first' ? 'from-amber-400 via-yellow-400 to-amber-500' : a.winnerPlace === 'second' ? 'from-slate-300 via-slate-400 to-slate-300' : a.winnerPlace === 'third' ? 'from-orange-400 via-amber-400 to-orange-400' : 'from-violet-400 via-purple-500 to-violet-400'}"></div>
-                    <div class="p-6">
-                        <div class="flex justify-between items-start mb-3">
-                            <div class="w-11 h-11 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center text-xl">${a.winnerPlace === 'first' ? '🥇' : a.winnerPlace === 'second' ? '🥈' : a.winnerPlace === 'third' ? '🥉' : '🏅'}</div>
-                            ${revoked
-                                ? `<span class="px-2 py-1 bg-rose-100 text-rose-700 text-[10px] font-black rounded uppercase">Revoked</span>`
-                                : `<span class="px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-black rounded uppercase">Active</span>`}
-                        </div>
-                        <h4 class="font-black text-lg text-slate-800 mb-1 leading-snug">${a.title}</h4>
-                        <p class="text-xs text-slate-400 font-bold mb-3">Issued ${dateStr}</p>
-                        ${winnerBadgeHTML}
-                        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 mt-3 mb-4">
-                            <span class="font-mono font-black text-slate-700 text-sm tracking-wider truncate">${id}</span>
-                            <button onclick="window.copyAwardId('${id}')" class="text-violet-500 hover:text-violet-700 text-xs font-bold shrink-0 ml-2">Copy</button>
-                        </div>
-                        <button onclick="window.viewAwardFile('${id}')" class="w-full py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-black transition-colors text-sm">View Award Letter</button>
-                    </div>
-                </div>`;
-            }).join('');
-        };
-
-        window.viewAwardFile = (awardId) => {
-            const a = (globalData.awardLetters || []).find(x => (x.awardId || x.id) === awardId);
-            if (!a) return showToast("Award letter file not found.", "⚠️");
-            document.getElementById('award-modal-title').innerText = `${a.title} — ${awardId}`;
+        // Award letter data now lives directly on the certificate record (see buildCertAwardSwipeCard
+        // above) rather than a separate collection — a student can have both a certificate and an
+        // award letter for the same achievement, shown as the two swipeable pages of one card.
+        window.viewAwardFile = (certId) => {
+            const c = (globalData.certificates || []).find(x => (x.certificateId || x.id) === certId);
+            if (!c || !c.awardId) return showToast("Award letter file not found.", "⚠️");
+            document.getElementById('award-modal-title').innerText = `${c.awardTitle || 'Award Letter'} — ${c.awardId}`;
             const body = document.getElementById('award-modal-body');
 
             // Wrap content in the same screenshot-protected wrapper used for certificates
-            if (a.fileType === 'pdf') {
-                body.innerHTML = `<div class="cert-protected-wrapper w-full"><iframe src="${a.fileData}" class="w-full h-[60vh] rounded-xl border border-slate-200 bg-white pointer-events-none"></iframe></div>`;
+            if (c.awardFileType === 'pdf') {
+                body.innerHTML = `<div class="cert-protected-wrapper w-full"><iframe src="${c.awardFileData}" class="w-full h-[60vh] rounded-xl border border-slate-200 bg-white pointer-events-none"></iframe></div>`;
             } else {
-                body.innerHTML = `<div class="cert-protected-wrapper w-full flex items-center justify-center"><img src="${a.fileData}" class="max-h-[60vh] w-full object-contain rounded-xl shadow-md bg-white" ondragstart="return false;"></div>`;
+                body.innerHTML = `<div class="cert-protected-wrapper w-full flex items-center justify-center"><img src="${c.awardFileData}" class="max-h-[60vh] w-full object-contain rounded-xl shadow-md bg-white" ondragstart="return false;"></div>`;
             }
 
-            // Download: only allowed for the award letter's owner — hidden entirely for everyone else
+            // Download: only allowed for the record's owner — hidden entirely for everyone else
             const dl = document.getElementById('award-modal-download');
             const dlWrap = document.getElementById('award-modal-download-wrap');
-            const isOwner = currentUser && a.studentId === currentUser.uid;
+            const isOwner = currentUser && c.studentId === currentUser.uid;
             if (isOwner) {
-                dl.href = a.fileData;
-                dl.download = `${awardId}${a.fileType === 'pdf' ? '.pdf' : '.jpg'}`;
+                dl.href = c.awardFileData;
+                dl.download = `${c.awardId}${c.awardFileType === 'pdf' ? '.pdf' : '.jpg'}`;
                 dl.onclick = null;
                 dlWrap.classList.remove('hidden');
             } else {
@@ -5743,101 +5750,6 @@
             }
         };
 
-        window.verifyAwardLetter = () => {
-            const input = document.getElementById('verify-award-input');
-            const resultEl = document.getElementById('verify-award-result');
-            const query = (input.value || '').trim().toUpperCase();
-            if (!query) {
-                resultEl.innerHTML = `<p class="text-sm text-slate-400 font-bold text-center py-2">Enter an Award ID above.</p>`;
-                return;
-            }
-            const award = (globalData.awardLetters || []).find(a => (a.awardId || a.id || '').toUpperCase() === query);
-            if (!award) {
-                resultEl.innerHTML = `
-                <div class="flex items-center gap-3 p-4 bg-rose-50 border border-rose-200 rounded-2xl">
-                    <span class="text-2xl">❌</span>
-                    <div>
-                        <div class="font-black text-rose-700">Not Found</div>
-                        <div class="text-xs text-rose-500 font-bold">No award letter matches this ID. It may be invalid, mistyped, or fake — that's exactly what this check is for.</div>
-                    </div>
-                </div>`;
-                return;
-            }
-
-            const id = award.awardId || award.id;
-            const revoked = award.status === 'revoked';
-            const dateStr = award.issueDate ? new Date(award.issueDate).toLocaleDateString() : '—';
-
-            const PLACE_MAP = [
-                { key: 'first',  medal: '🥇', label: '1st Place Winner', bg: 'bg-amber-50',   border: 'border-amber-300',  text: 'text-amber-800'  },
-                { key: 'second', medal: '🥈', label: '2nd Place Winner', bg: 'bg-slate-100',  border: 'border-slate-300',  text: 'text-slate-700'  },
-                { key: 'third',  medal: '🥉', label: '3rd Place Winner', bg: 'bg-orange-50',  border: 'border-orange-200', text: 'text-orange-800' },
-            ];
-            let winnerBadgeHTML = '';
-            (globalData.seasons || []).forEach(season => {
-                if (!season.winner) return;
-                PLACE_MAP.forEach(p => {
-                    const placeWinners = getPlaceWinners(season.winner, p.key);
-                    const w = placeWinners.find(x => x.id === award.studentId);
-                    if (w) {
-                        winnerBadgeHTML += `
-                        <div class="flex items-center gap-3 px-4 py-3 ${p.bg} border ${p.border} rounded-2xl">
-                            <span class="text-3xl">${p.medal}</span>
-                            <div>
-                                <div class="font-black ${p.text} text-sm">${p.label}${placeWinners.length > 1 ? ' (Joint)' : ''}</div>
-                                <div class="text-xs font-bold text-slate-500">${season.name} &nbsp;·&nbsp; ${w.xp} XP</div>
-                            </div>
-                        </div>`;
-                    }
-                });
-            });
-
-            let awardPreviewHTML = '';
-            if (award.fileData) {
-                if (award.fileType === 'pdf') {
-                    awardPreviewHTML = `
-                    <div class="cert-protected-wrapper rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
-                        <iframe src="${award.fileData}" class="w-full h-64 sm:h-80 rounded-2xl bg-white pointer-events-none"></iframe>
-                    </div>`;
-                } else {
-                    awardPreviewHTML = `
-                    <div class="cert-protected-wrapper rounded-2xl overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center bg-slate-50 p-2">
-                        <img src="${award.fileData}" class="max-h-64 sm:max-h-80 w-full object-contain rounded-xl" ondragstart="return false;">
-                    </div>`;
-                }
-            }
-
-            resultEl.innerHTML = `
-            <div class="space-y-4">
-                <div class="flex items-center gap-3 p-4 ${revoked ? 'bg-rose-50 border-rose-200' : 'bg-emerald-50 border-emerald-200'} border rounded-2xl">
-                    <span class="text-2xl">${revoked ? '⚠️' : '✅'}</span>
-                    <div>
-                        <div class="font-black ${revoked ? 'text-rose-700' : 'text-emerald-700'} text-base">${revoked ? 'Revoked Award Letter' : 'Valid Award Letter'}</div>
-                        <div class="text-xs ${revoked ? 'text-rose-500' : 'text-emerald-600'} font-bold">${revoked ? 'This award letter ID was revoked and is no longer valid.' : 'This award letter ID is genuine and on record.'}</div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 text-xs bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                    <div><span class="text-slate-400 font-bold block mb-0.5">Issued To</span><span class="font-black text-slate-800 text-sm">${award.studentName || 'Unknown'}</span></div>
-                    <div><span class="text-slate-400 font-bold block mb-0.5">Enrollment ID</span><span class="font-black text-slate-800 text-sm">${award.enrollmentId || '—'}</span></div>
-                    <div class="col-span-2"><span class="text-slate-400 font-bold block mb-0.5">Award Title</span><span class="font-black text-slate-800 text-sm">${award.title}</span></div>
-                    <div><span class="text-slate-400 font-bold block mb-0.5">Issue Date</span><span class="font-black text-slate-800 text-sm">${dateStr}</span></div>
-                    <div><span class="text-slate-400 font-bold block mb-0.5">Award ID</span><span class="font-black text-slate-800 text-sm font-mono">${id}</span></div>
-                </div>
-
-                ${winnerBadgeHTML ? `
-                <div class="space-y-2">
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">🏆 Season Achievements</p>
-                    ${winnerBadgeHTML}
-                </div>` : ''}
-
-                ${awardPreviewHTML ? `
-                <div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 mb-2">📄 Award Letter Preview</p>
-                    ${awardPreviewHTML}
-                </div>` : ''}
-            </div>`;
-        };
         // ========== WINNER ANNOUNCEMENT POPUP ==========
         // Shows once per user per winner announcement version
         const POPUP_KEY_PREFIX = 'winner_popup_seen_';
