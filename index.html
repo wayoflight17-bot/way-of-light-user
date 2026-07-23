@@ -503,6 +503,7 @@
                     <div>
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1">Password</label>
                         <input type="password" id="auth-password" placeholder="••••••••" class="w-full px-4 py-3.5 rounded-xl bg-slate-50 border-2 border-slate-100 focus:border-indigo-500 outline-none font-bold text-slate-700" onkeydown="if(event.key === 'Enter') window.loginWithEmail()">
+                        <button type="button" onclick="window.handleForgotPassword()" class="text-xs font-bold text-indigo-500 hover:text-indigo-700 mt-2 ml-1 transition-colors">Forgot password?</button>
                     </div>
                     <div class="pt-2">
                         <button onclick="window.loginWithEmail()" class="w-full bg-indigo-600 text-white py-3.5 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-md">Sign In to Portal</button>
@@ -1245,16 +1246,32 @@
         <!-- Divider -->
         <div class="border-t border-slate-200 mb-0"></div>
 
-        <!-- Tabs: Participation / Achievements -->
+        <!-- Tabs: Participation / Posts / Achievements -->
         <div class="flex border-b border-slate-200 mb-0">
             <button onclick="window.setPvTab('participation')" id="pv-tab-participation" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-widest text-indigo-600 border-b-2 border-indigo-600 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 Participation
             </button>
+            <button onclick="window.setPvTab('posts')" id="pv-tab-posts" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-400 border-b-2 border-transparent transition-all">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm3 3h10M7 12h10M7 16h6"/></svg>
+                Posts
+            </button>
             <button onclick="window.setPvTab('achievements')" id="pv-tab-achievements" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-400 border-b-2 border-transparent transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                 Achievements
             </button>
+        </div>
+
+        <!-- Posts: certificates + award letters shown as Instagram-style posts (like/comment) -->
+        <div id="pv-tab-posts-content" class="hidden-view">
+            <div id="pv-posts-feed" class="divide-y divide-slate-100">
+                <!-- injected -->
+            </div>
+            <div id="pv-posts-empty" class="hidden-view py-16 text-center">
+                <div class="text-5xl mb-3">📸</div>
+                <p class="font-bold text-slate-400">No posts yet</p>
+                <p class="text-xs text-slate-300 font-semibold mt-1">Certificates and award letters will show up here as posts.</p>
+            </div>
         </div>
 
         <!-- Participation: every test/quiz attempt, most recent first -->
@@ -1676,7 +1693,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-analytics.js";
-        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, linkWithCredential, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword, EmailAuthProvider, linkWithCredential, signInAnonymously, signInWithCustomToken, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, getDoc, query, where, onSnapshot, updateDoc, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
@@ -1708,7 +1725,7 @@
         let userData = null; 
         let pendingGoogleUser = null; 
         let authMethod = null;
-        let globalData = { users: {}, results: [], quizzes: [], config: {}, seasons: [], certificates: [], awardLetters: [], studyContent: [] };
+        let globalData = { users: {}, results: [], quizzes: [], config: {}, seasons: [], certificates: [], awardLetters: [], studyContent: [], categoryCovers: [] };
         let activeSession = null;
 
         // ===========================================================================
@@ -2727,6 +2744,37 @@
             }
         };
 
+        // Uses Firebase's own secure "send password reset email" flow — nobody, including the
+        // admin panel, ever sees or handles the actual password. The student gets an email with a
+        // link that lets them set a brand-new password directly with Google/Firebase.
+        window.handleForgotPassword = async () => {
+            const emailField = document.getElementById('auth-email');
+            let email = (emailField?.value || '').trim();
+            if (!email || !email.includes('@')) {
+                email = prompt('Enter the email address on your account to receive a password reset link:');
+                if (!email) return;
+                email = email.trim();
+            }
+            if (!email.includes('@')) {
+                return showError('Please enter a valid email address.', 'auth-error');
+            }
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showToast(`Reset link sent to ${email}. Check your inbox (and spam folder).`, "📧");
+            } catch (err) {
+                // Firebase deliberately doesn't reveal whether an account exists for a given email
+                // on some error paths, to avoid leaking who has an account — show a generic,
+                // friendly message rather than the raw Firebase error in that case.
+                if (err.code === 'auth/user-not-found') {
+                    showToast("If an account exists for that email, a reset link has been sent.", "📧");
+                } else if (err.code === 'auth/invalid-email') {
+                    showError('That email address looks invalid. Please double-check it.', 'auth-error');
+                } else {
+                    showError(err.message.replace('Firebase:', '').trim(), 'auth-error');
+                }
+            }
+        };
+
         window.copyStudentId = async () => {
             const eid = userData?.enrollmentId;
             if(!eid) return showToast("No Student ID assigned yet.", "⚠️");
@@ -3127,6 +3175,16 @@
 
             unsubscribes.push(onSnapshot(getPublicCol('study_content'), snapshot => {
                 globalData.studyContent = snapshot.empty ? [] : snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+                if (!document.getElementById('view-study').classList.contains('hidden-view')) {
+                    window.renderStudyView();
+                }
+                if (!document.getElementById('view-dashboard').classList.contains('hidden-view')) {
+                    renderHomeMaterialGrid(getActiveSeason());
+                }
+            }));
+
+            unsubscribes.push(onSnapshot(getPublicCol('study_category_covers'), snapshot => {
+                globalData.categoryCovers = snapshot.empty ? [] : snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                 if (!document.getElementById('view-study').classList.contains('hidden-view')) {
                     window.renderStudyView();
                 }
@@ -4571,6 +4629,20 @@
         const getFollowCol = (uid, type) => collection(db, 'artifacts', appId, 'public', 'data', 'follows', uid, type);
         const getFollowDoc = (uid, type, targetId) => doc(db, 'artifacts', appId, 'public', 'data', 'follows', uid, type, targetId);
 
+        // ── Likes & comments on certificates/award letters, shown as Instagram-style posts ──
+        // postId is synthetic: 'cert_<certificateId>' or 'award_<awardId>' — this lets both
+        // certificates and award letters share one like/comment system without ever colliding,
+        // even if a certificate and an award letter happen to reuse the same underlying ID scheme.
+        // Firestore paths:
+        //   post_likes/{postId}/likes/{uid}           → { uid, name, likedAt }
+        //   post_comments/{postId}/comments/{commentId} → { uid, name, avatar, text, createdAt }
+        const postIdForCert = (certId) => `cert_${certId}`;
+        const postIdForAward = (awardId) => `award_${awardId}`;
+        const getPostLikesCol = (postId) => collection(db, 'artifacts', appId, 'public', 'data', 'post_likes', postId, 'likes');
+        const getPostLikeDoc = (postId, uid) => doc(db, 'artifacts', appId, 'public', 'data', 'post_likes', postId, 'likes', uid);
+        const getPostCommentsCol = (postId) => collection(db, 'artifacts', appId, 'public', 'data', 'post_comments', postId, 'comments');
+        const getPostCommentDoc = (postId, commentId) => doc(db, 'artifacts', appId, 'public', 'data', 'post_comments', postId, 'comments', commentId);
+
         let myFollowing = new Set(); // UIDs I follow
         let myFollowers = new Set(); // UIDs that follow me
         let socialUnsubscribes = [];
@@ -4669,7 +4741,7 @@
         };
 
         window.setPvTab = (tab) => {
-            const tabs = { participation: 'pv-tab-participation', achievements: 'pv-tab-achievements' };
+            const tabs = { participation: 'pv-tab-participation', posts: 'pv-tab-posts', achievements: 'pv-tab-achievements' };
             Object.entries(tabs).forEach(([key, btnId]) => {
                 const btn = document.getElementById(btnId);
                 const content = document.getElementById(`pv-tab-${key}-content`);
@@ -4682,6 +4754,9 @@
                     content.classList.add('hidden-view');
                 }
             });
+            if (tab === 'posts' && viewingProfileUid) {
+                renderProfilePostsFeed(viewingProfileUid);
+            }
         };
 
         const updateProfileViewFollowBtn = (uid) => {
@@ -5190,6 +5265,227 @@
                     <button onclick="window.viewCertFile('${id}')" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold shrink-0">View</button>
                 </div>`;
             }).join('');
+        };
+
+        // ========== INSTAGRAM-STYLE POSTS FEED (certificates + award letters) ==========
+        // Each certificate/award letter a student has becomes one "post": image, like button,
+        // like count, and a comment thread — same interaction model as a normal social post.
+        // Only live listeners for whichever post is currently expanded are kept active, so
+        // browsing a profile with many posts doesn't open dozens of simultaneous subscriptions.
+        let postsFeedUnsubscribes = []; // active like/comment listeners for the currently-open profile's feed
+        let postsFeedCache = {};        // postId -> { likes: [...], comments: [...] } — drives re-renders
+
+        const teardownPostsFeedListeners = () => {
+            postsFeedUnsubscribes.forEach(u => u());
+            postsFeedUnsubscribes = [];
+        };
+
+        const buildProfilePostsList = (uid) => {
+            const certs = (globalData.certificates || [])
+                .filter(c => c.studentId === uid && c.status !== 'revoked')
+                .map(c => ({ kind: 'cert', id: c.certificateId || c.id, data: c, createdAt: c.createdAt || c.issueDate || 0 }));
+            const awards = (globalData.awardLetters || [])
+                .filter(a => a.studentId === uid && a.status !== 'revoked')
+                .map(a => ({ kind: 'award', id: a.awardId || a.id, data: a, createdAt: a.createdAt || a.issueDate || 0 }));
+            return [...certs, ...awards].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        };
+
+        window.renderProfilePostsFeed = (uid) => {
+            teardownPostsFeedListeners();
+            postsFeedCache = {};
+
+            const feedEl = document.getElementById('pv-posts-feed');
+            const emptyEl = document.getElementById('pv-posts-empty');
+            if (!feedEl) return;
+
+            const posts = buildProfilePostsList(uid);
+            if (posts.length === 0) {
+                feedEl.innerHTML = '';
+                emptyEl.classList.remove('hidden-view');
+                return;
+            }
+            emptyEl.classList.add('hidden-view');
+
+            const owner = globalData.users[uid] || {};
+
+            feedEl.innerHTML = posts.map(p => {
+                const postId = p.kind === 'cert' ? postIdForCert(p.id) : postIdForAward(p.id);
+                const title = p.data.title;
+                const dateStr = (p.createdAt) ? new Date(p.createdAt).toLocaleDateString() : '';
+                const kindLabel = p.kind === 'cert' ? '🎓 Certificate' : '🏅 Award Letter';
+                const winnerPlace = p.data.winnerPlace;
+                const PLACE_ICONS = { first: '🥇', second: '🥈', third: '🥉' };
+
+                const imgHTML = p.data.fileType === 'pdf'
+                    ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl">📕</div>`
+                    : `<img src="${p.data.fileData}" class="w-full aspect-square object-cover bg-slate-100">`;
+
+                return `
+                <div class="py-5 post-card" data-post-id="${postId}">
+                    <div class="flex items-center gap-2.5 px-1 mb-3">
+                        <img src="${owner.avatar || AVATARS[0]}" class="w-8 h-8 rounded-full border border-slate-200 object-cover">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-black text-slate-800 text-sm truncate">${owner.name || 'Student'}</div>
+                            <div class="text-[10px] text-slate-400 font-bold">${kindLabel}${dateStr ? ` · ${dateStr}` : ''}</div>
+                        </div>
+                        ${winnerPlace ? `<span class="text-xl">${PLACE_ICONS[winnerPlace] || ''}</span>` : ''}
+                    </div>
+
+                    <button onclick="window.${p.kind === 'cert' ? 'viewCertFile' : 'viewAwardFile'}('${p.id}')" class="block w-full rounded-2xl overflow-hidden border border-slate-100">
+                        ${imgHTML}
+                    </button>
+
+                    <div class="px-1 mt-3">
+                        <div class="flex items-center gap-4 mb-2">
+                            <button onclick="window.toggleLikePost('${postId}')" id="like-btn-${postId}" class="flex items-center gap-1.5 text-2xl transition-transform active:scale-90">
+                                <span id="like-icon-${postId}">🤍</span>
+                            </button>
+                            <button onclick="window.focusCommentInput('${postId}')" class="flex items-center gap-1.5 text-xl text-slate-600">
+                                💬
+                            </button>
+                        </div>
+                        <div id="like-count-${postId}" class="font-black text-slate-800 text-sm mb-1">0 likes</div>
+                        <div class="font-bold text-slate-700 text-sm mb-2"><span class="font-black">${owner.name || 'Student'}</span> ${title}</div>
+
+                        <div id="comments-list-${postId}" class="space-y-2 mb-2"></div>
+                        <button onclick="window.toggleCommentsExpanded('${postId}')" id="comments-toggle-${postId}" class="hidden text-xs font-bold text-slate-400 hover:text-slate-600 mb-2"></button>
+
+                        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                            <input type="text" id="comment-input-${postId}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter') window.submitComment('${postId}')" class="flex-1 text-sm font-medium px-3 py-2 rounded-full bg-slate-50 border border-slate-100 focus:border-indigo-300 outline-none">
+                            <button onclick="window.submitComment('${postId}')" class="text-indigo-600 font-black text-sm px-2">Post</button>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // Attach a live like/comment listener per post now that the cards exist in the DOM.
+            posts.forEach(p => {
+                const postId = p.kind === 'cert' ? postIdForCert(p.id) : postIdForAward(p.id);
+                postsFeedUnsubscribes.push(onSnapshot(getPostLikesCol(postId), snap => {
+                    const likes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+                    postsFeedCache[postId] = postsFeedCache[postId] || {};
+                    postsFeedCache[postId].likes = likes;
+                    renderPostLikeUI(postId);
+                }, err => console.warn('Likes listener error:', err.code)));
+
+                postsFeedUnsubscribes.push(onSnapshot(getPostCommentsCol(postId), snap => {
+                    const comments = snap.docs
+                        .map(d => ({ id: d.id, ...d.data() }))
+                        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+                    postsFeedCache[postId] = postsFeedCache[postId] || {};
+                    postsFeedCache[postId].comments = comments;
+                    renderPostCommentsUI(postId);
+                }, err => console.warn('Comments listener error:', err.code)));
+            });
+        };
+
+        const renderPostLikeUI = (postId) => {
+            const likes = postsFeedCache[postId]?.likes || [];
+            const iconEl = document.getElementById(`like-icon-${postId}`);
+            const countEl = document.getElementById(`like-count-${postId}`);
+            if (!iconEl || !countEl) return;
+            const iLiked = currentUser && likes.some(l => l.uid === currentUser.uid);
+            iconEl.innerText = iLiked ? '❤️' : '🤍';
+            countEl.innerText = `${likes.length} ${likes.length === 1 ? 'like' : 'likes'}`;
+        };
+
+        const COMMENTS_COLLAPSED_COUNT = 3;
+        let expandedComments = new Set(); // postIds where the user chose to see all comments
+
+        const renderPostCommentsUI = (postId) => {
+            const comments = postsFeedCache[postId]?.comments || [];
+            const listEl = document.getElementById(`comments-list-${postId}`);
+            const toggleEl = document.getElementById(`comments-toggle-${postId}`);
+            if (!listEl) return;
+
+            const isExpanded = expandedComments.has(postId);
+            const shown = isExpanded ? comments : comments.slice(-COMMENTS_COLLAPSED_COUNT);
+
+            listEl.innerHTML = shown.map(c => {
+                const canDelete = currentUser && (c.uid === currentUser.uid || viewingProfileUid === currentUser.uid);
+                return `
+                <div class="flex items-start gap-2 group">
+                    <span class="font-black text-slate-800 text-xs shrink-0">${c.name || 'Student'}</span>
+                    <span class="text-slate-600 text-xs flex-1 break-words">${c.text}</span>
+                    ${canDelete ? `<button onclick="window.deletePostComment('${postId}','${c.id}')" class="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500 text-xs shrink-0 transition-opacity">✕</button>` : ''}
+                </div>`;
+            }).join('');
+
+            if (toggleEl) {
+                if (comments.length > COMMENTS_COLLAPSED_COUNT && !isExpanded) {
+                    toggleEl.classList.remove('hidden');
+                    toggleEl.innerText = `View all ${comments.length} comments`;
+                } else if (isExpanded && comments.length > COMMENTS_COLLAPSED_COUNT) {
+                    toggleEl.classList.remove('hidden');
+                    toggleEl.innerText = `Hide comments`;
+                } else {
+                    toggleEl.classList.add('hidden');
+                }
+            }
+        };
+
+        window.toggleCommentsExpanded = (postId) => {
+            if (expandedComments.has(postId)) {
+                expandedComments.delete(postId);
+            } else {
+                expandedComments.add(postId);
+            }
+            renderPostCommentsUI(postId);
+        };
+
+        window.focusCommentInput = (postId) => {
+            document.getElementById(`comment-input-${postId}`)?.focus();
+        };
+
+        window.toggleLikePost = async (postId) => {
+            if (!currentUser) return showToast("Please sign in to like posts.", "⚠️");
+            const likes = postsFeedCache[postId]?.likes || [];
+            const alreadyLiked = likes.some(l => l.uid === currentUser.uid);
+            try {
+                if (alreadyLiked) {
+                    await deleteDoc(getPostLikeDoc(postId, currentUser.uid));
+                } else {
+                    await setDoc(getPostLikeDoc(postId, currentUser.uid), {
+                        uid: currentUser.uid,
+                        name: userData?.name || 'Student',
+                        likedAt: Date.now()
+                    });
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Couldn't update like — please try again.", "⚠️");
+            }
+        };
+
+        window.submitComment = async (postId) => {
+            if (!currentUser) return showToast("Please sign in to comment.", "⚠️");
+            const input = document.getElementById(`comment-input-${postId}`);
+            const text = (input?.value || '').trim();
+            if (!text) return;
+            if (text.length > 500) return showToast("Comment is too long (max 500 characters).", "⚠️");
+            try {
+                const ref = doc(getPostCommentsCol(postId));
+                await setDoc(ref, {
+                    uid: currentUser.uid,
+                    name: userData?.name || 'Student',
+                    avatar: userData?.avatar || '',
+                    text,
+                    createdAt: Date.now()
+                });
+                input.value = '';
+            } catch (e) {
+                console.error(e);
+                showToast("Couldn't post comment — please try again.", "⚠️");
+            }
+        };
+
+        window.deletePostComment = async (postId, commentId) => {
+            if (!confirm("Delete this comment?")) return;
+            try {
+                await deleteDoc(getPostCommentDoc(postId, commentId));
+            } catch (e) {
+                showToast("Couldn't delete comment — please try again.", "⚠️");
+            }
         };
 
         window.verifyCertificate = () => {
@@ -5886,6 +6182,13 @@
         // rather than a thin, easy-to-miss text label, specifically so students always know
         // which portion a given post belongs to. Items with no category set still get a clearly
         // labeled "General" section instead of silently appearing with no heading at all.
+        // Deterministic key matching the admin panel's folderCoverKey exactly — must stay in sync
+        // with admin.html's version, since this is how a cover image set by admin is looked up here.
+        const folderCoverKey = (seasonId, category) => {
+            const safeCat = (category || '__general__').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'general';
+            return `${seasonId || 'nogeneral'}__${safeCat}`;
+        };
+
         const renderMaterialGroupedByPortion = (items) => {
             const groups = {};
             const order = [];
@@ -5908,10 +6211,16 @@
                 const isGeneralGroup = key === '__general__';
                 const label = isGeneralGroup ? 'General' : key;
                 const colors = sectionColors[i % sectionColors.length];
+                const coverKey = folderCoverKey(groupItems[0]?.seasonId, isGeneralGroup ? '' : key);
+                const cover = (globalData.categoryCovers || []).find(c => c.id === coverKey);
+                const coverImgHTML = cover?.imageData
+                    ? `<img src="${cover.imageData}" class="w-10 h-10 rounded-xl object-cover border ${colors.border} flex-shrink-0">`
+                    : '';
                 return `
                 <div class="mb-0">
-                    <div class="flex items-center gap-2.5 mb-4 ${colors.bg} border ${colors.border} rounded-2xl px-4 py-3">
-                        <span class="w-2 h-2 rounded-full ${colors.dot} flex-shrink-0"></span>
+                    <div class="flex items-center gap-3 mb-4 ${colors.bg} border ${colors.border} rounded-2xl px-4 py-3">
+                        ${coverImgHTML}
+                        ${!coverImgHTML ? `<span class="w-2 h-2 rounded-full ${colors.dot} flex-shrink-0"></span>` : ''}
                         <span class="font-black ${colors.text} text-sm flex-1 min-w-0 truncate">${label}</span>
                         <span class="text-[10px] font-black ${colors.text} bg-white/70 px-2 py-1 rounded-full flex-shrink-0">${groupItems.length} ${groupItems.length === 1 ? 'item' : 'items'}</span>
                     </div>
