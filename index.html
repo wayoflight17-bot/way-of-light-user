@@ -1236,15 +1236,11 @@
         <!-- Divider -->
         <div class="border-t border-slate-200 mb-0"></div>
 
-        <!-- Tabs: Participation / Posts / Achievements -->
+        <!-- Tabs: Participation / Achievements -->
         <div class="flex border-b border-slate-200 mb-0">
             <button onclick="window.setPvTab('participation')" id="pv-tab-participation" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-widest text-indigo-600 border-b-2 border-indigo-600 transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 Participation
-            </button>
-            <button onclick="window.setPvTab('posts')" id="pv-tab-posts" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-400 border-b-2 border-transparent transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm3 3h10M7 12h10M7 16h6"/></svg>
-                Posts
             </button>
             <button onclick="window.setPvTab('achievements')" id="pv-tab-achievements" class="flex-1 py-3 flex items-center justify-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-400 border-b-2 border-transparent transition-all">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
@@ -1252,19 +1248,7 @@
             </button>
         </div>
 
-        <!-- Posts: certificates + award letters shown as Instagram-style posts (like/comment) -->
-        <div id="pv-tab-posts-content" class="hidden-view">
-            <div id="pv-posts-feed" class="divide-y divide-slate-100">
-                <!-- injected -->
-            </div>
-            <div id="pv-posts-empty" class="hidden-view py-16 text-center">
-                <div class="text-5xl mb-3">📸</div>
-                <p class="font-bold text-slate-400">No posts yet</p>
-                <p class="text-xs text-slate-300 font-semibold mt-1">Certificates and award letters will show up here as posts.</p>
-            </div>
-        </div>
-
-        <!-- Participation: every test/quiz attempt, most recent first -->
+        <!-- Participation: every test/quiz attempt, most recent first, plus rank milestones -->
         <div id="pv-tab-participation-content">
             <div id="pv-participation-list" class="divide-y divide-slate-100">
                 <!-- injected -->
@@ -1274,19 +1258,24 @@
                 <p class="font-bold text-slate-400">No tests taken yet</p>
                 <p class="text-xs text-slate-300 font-semibold mt-1">Attempts will show up here once they've taken a test.</p>
             </div>
-        </div>
-
-        <!-- Achievements: certificates earned + rank milestones unlocked -->
-        <div id="pv-tab-achievements-content" class="hidden-view p-4 space-y-6">
-            <!-- Certificates -->
-            <div id="pv-ach-certs-section">
-                <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">🎓 Verified Certificates</div>
-                <div id="pv-certs-list" class="flex flex-col gap-2"></div>
-            </div>
             <!-- Rank milestones -->
-            <div>
+            <div class="p-4 pt-2">
                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">🏅 Rank Milestones</div>
                 <div id="pv-rank-milestones" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+            </div>
+        </div>
+
+        <!-- Achievements: certificates + award letters shown as posts (like/comment) — this is now
+             the single place certificates/award letters appear on a profile, replacing the old
+             separate "Posts" tab and the old compact "Verified Certificates" list. -->
+        <div id="pv-tab-achievements-content" class="hidden-view">
+            <div id="pv-posts-feed" class="divide-y divide-slate-100">
+                <!-- injected -->
+            </div>
+            <div id="pv-posts-empty" class="hidden-view py-16 text-center">
+                <div class="text-5xl mb-3">🎓</div>
+                <p class="font-bold text-slate-400">No achievements yet</p>
+                <p class="text-xs text-slate-300 font-semibold mt-1">Certificates and award letters will show up here.</p>
             </div>
         </div>
 
@@ -3152,7 +3141,9 @@
                 if (!document.getElementById('view-certificates').classList.contains('hidden-view')) {
                     window.renderMyCertificates();
                 }
-                if (viewingProfileUid) renderProfileCertSection(viewingProfileUid);
+                if (viewingProfileUid && document.getElementById('pv-tab-achievements-content') && !document.getElementById('pv-tab-achievements-content').classList.contains('hidden-view')) {
+                    renderProfilePostsFeed(viewingProfileUid);
+                }
             }));
 
             unsubscribes.push(onSnapshot(getPublicCol('study_content'), snapshot => {
@@ -3181,6 +3172,34 @@
         // as joint winners for that place. This helper normalizes both into an array so every place
         // that displays winners doesn't need to special-case ties — it just loops over whatever comes
         // back. Returns [] if that place has no winner at all.
+        // Rank levels are admin-configurable (Settings → Rank Levels) — this mirrors the same
+        // default fallback used in the admin panel, so a fresh install with no saved ranks yet
+        // still shows something sensible instead of nothing.
+        const DEFAULT_RANK_LEVELS = [
+            { title: 'Novice', icon: '🌱', threshold: 0 },
+            { title: 'Scholar', icon: '📘', threshold: 50 },
+            { title: 'Master', icon: '🔥', threshold: 150 },
+            { title: 'Grandmaster', icon: '👑', threshold: 300 }
+        ];
+        const getRankLevels = () => {
+            const ranks = globalData.config?.ranks;
+            return (Array.isArray(ranks) && ranks.length > 0)
+                ? [...ranks].sort((a, b) => a.threshold - b.threshold)
+                : DEFAULT_RANK_LEVELS;
+        };
+        // Returns the highest rank level a given XP amount qualifies for, or null if the XP is
+        // below every configured threshold (shouldn't normally happen since ranks usually start
+        // at 0 XP, but handled safely either way).
+        const getRankForXP = (xp) => {
+            const levels = getRankLevels();
+            let matched = null;
+            for (const level of levels) {
+                if (xp >= level.threshold) matched = level;
+                else break;
+            }
+            return matched;
+        };
+
         const getPlaceWinners = (winnerObj, place) => {
             if (!winnerObj) return [];
             const w = winnerObj[place];
@@ -4791,7 +4810,7 @@
         };
 
         window.setPvTab = (tab) => {
-            const tabs = { participation: 'pv-tab-participation', posts: 'pv-tab-posts', achievements: 'pv-tab-achievements' };
+            const tabs = { participation: 'pv-tab-participation', achievements: 'pv-tab-achievements' };
             Object.entries(tabs).forEach(([key, btnId]) => {
                 const btn = document.getElementById(btnId);
                 const content = document.getElementById(`pv-tab-${key}-content`);
@@ -4804,7 +4823,7 @@
                     content.classList.add('hidden-view');
                 }
             });
-            if (tab === 'posts' && viewingProfileUid) {
+            if (tab === 'achievements' && viewingProfileUid) {
                 renderProfilePostsFeed(viewingProfileUid);
             }
         };
@@ -4982,6 +5001,10 @@
                 pvParticipationList.innerHTML = allAttempts.map(r => {
                     const quiz = MASTER_QUIZZES.find(q => q.id === r.testId);
                     const date = r.timestamp ? new Date(r.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+                    // Rank for THIS attempt's XP specifically (not the person's overall total) —
+                    // so every test attempt shows what rank that score alone would reach, using
+                    // whatever thresholds admin has configured in Settings → Rank Levels.
+                    const attemptRank = getRankForXP(r.score);
                     return `
                     <div class="flex items-center justify-between gap-3 py-3 px-1">
                         <div class="flex items-center gap-3 min-w-0">
@@ -4991,19 +5014,17 @@
                                 <p class="text-[10px] text-slate-400 font-bold mt-0.5">${date}</p>
                             </div>
                         </div>
-                        <span class="px-3 py-1.5 bg-emerald-100 text-emerald-800 font-black rounded-xl text-sm shrink-0">${r.score} XP</span>
+                        <div class="flex items-center gap-2 shrink-0">
+                            ${attemptRank ? `<span class="px-2.5 py-1.5 bg-amber-50 border border-amber-200 text-amber-700 font-black rounded-xl text-xs flex items-center gap-1">${attemptRank.icon} ${attemptRank.title}</span>` : ''}
+                            <span class="px-3 py-1.5 bg-emerald-100 text-emerald-800 font-black rounded-xl text-sm">${r.score} XP</span>
+                        </div>
                     </div>`;
                 }).join('');
             }
 
-            // Achievements: certificates + rank milestones unlocked, based on this person's XP.
-            renderProfileCertSection(uid);
-            const milestones = [
-                { title: 'Novice', icon: '🌱', threshold: 0 },
-                { title: 'Scholar', icon: '📘', threshold: 50 },
-                { title: 'Master', icon: '🔥', threshold: 150 },
-                { title: 'Grandmaster', icon: '👑', threshold: 300 }
-            ];
+            // Rank milestones now live under the Participation tab, based on this person's XP.
+            // Ranks are admin-configurable (Settings → Rank Levels), not fixed in code.
+            const milestones = getRankLevels();
             const pvMilestones = document.getElementById('pv-rank-milestones');
             if (pvMilestones) {
                 pvMilestones.innerHTML = milestones.map(m => {
@@ -5019,8 +5040,9 @@
 
             updateProfileViewFollowBtn(uid);
             // Coming from the home following-feed means they tapped a certificate/award post
-            // specifically, so land straight on the Posts tab instead of the usual default.
-            window.setPvTab(source === 'feed' ? 'posts' : 'participation');
+            // specifically, so land straight on Achievements (where posts now live) instead of
+            // the usual default.
+            window.setPvTab(source === 'feed' ? 'achievements' : 'participation');
             ['view-dashboard', 'view-people', 'view-review', 'view-exam', 'view-certificates'].forEach(v => {
                 document.getElementById(v)?.classList.add('hidden-view');
             });
@@ -5350,34 +5372,6 @@
         };
 
 
-        // Compact "verified certificates" strip shown on a user's public profile (active certs only)
-        const renderProfileCertSection = (uid) => {
-            const section = document.getElementById('pv-ach-certs-section');
-            const list = document.getElementById('pv-certs-list');
-            if (!section || !list) return;
-            const certs = (globalData.certificates || []).filter(c => c.studentId === uid && c.status !== 'revoked');
-            if (certs.length === 0) {
-                list.innerHTML = '<p class="text-xs font-bold text-slate-400 py-1">No certificates earned yet.</p>';
-                return;
-            }
-            list.innerHTML = certs.map(c => {
-                const id = c.certificateId || c.id;
-                const PLACE_MAP_COMPACT = { first: { medal: '🥇', text: 'text-amber-700' }, second: { medal: '🥈', text: 'text-slate-600' }, third: { medal: '🥉', text: 'text-orange-700' } };
-                const pm = c.winnerPlace ? PLACE_MAP_COMPACT[c.winnerPlace] : null;
-                return `
-                <div class="flex items-center justify-between gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2.5">
-                    <div class="min-w-0 flex items-center gap-2">
-                        ${pm ? `<span class="text-base flex-shrink-0">${pm.medal}</span>` : ''}
-                        <div class="min-w-0">
-                            <div class="font-bold text-slate-800 text-xs truncate">${c.title}</div>
-                            <div class="font-mono font-black text-amber-700 text-[11px] tracking-wider">${id}</div>
-                        </div>
-                    </div>
-                    <button onclick="window.viewCertFile('${id}')" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold shrink-0">View</button>
-                </div>`;
-            }).join('');
-        };
-
         // ========== INSTAGRAM-STYLE POSTS FEED (certificates, with award letters as a swipe) ==========
         // Each certificate RECORD is one post — if it also has an award letter, the image area is a
         // two-page swipeable card (cert first, award second), matching a normal Instagram post with
@@ -5425,12 +5419,16 @@
                 const winnerPlace = c.winnerPlace;
                 const PLACE_ICONS = { first: '🥇', second: '🥈', third: '🥉' };
 
+                // Certificates and award letters vary a lot in size/aspect ratio (landscape,
+                // portrait, different page proportions), so the feed shows the COMPLETE document
+                // rather than force-cropping it into a square — object-contain on a flexible-height
+                // container means nothing gets cut off, whatever shape the uploaded file is.
                 const certImgHTML = c.fileType === 'pdf'
                     ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
-                    : `<img src="${c.fileData}" class="w-full aspect-square object-cover bg-slate-100 shrink-0 snap-center">`;
+                    : `<img src="${c.fileData}" class="w-full max-h-[32rem] object-contain bg-slate-100 shrink-0 snap-center">`;
                 const awardImgHTML = hasAward ? (c.awardFileType === 'pdf'
                     ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
-                    : `<img src="${c.awardFileData}" class="w-full aspect-square object-cover bg-slate-100 shrink-0 snap-center">`) : '';
+                    : `<img src="${c.awardFileData}" class="w-full max-h-[32rem] object-contain bg-slate-100 shrink-0 snap-center">`) : '';
 
                 return `
                 <div class="py-5 post-card" data-post-id="${postId}">
