@@ -963,7 +963,8 @@
     <div id="view-study" class="hidden-view fade-in pb-16 app-content-offset">
 
         <!-- Hero header -->
-        <div style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%)" class="px-4 pt-10 pb-16 mb-0 relative overflow-hidden">
+        <div id="study-hero-bg" style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%)" class="px-4 pt-10 pb-16 mb-0 relative overflow-hidden bg-cover bg-center transition-all duration-500">
+            <div id="study-hero-scrim" class="hidden absolute inset-0 bg-gradient-to-b from-slate-900/50 via-slate-900/65 to-slate-900/85 pointer-events-none"></div>
             <div style="position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none"></div>
             <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;border-radius:50%;background:rgba(99,102,241,0.12);pointer-events:none"></div>
             <div class="max-w-3xl mx-auto relative z-10">
@@ -3275,12 +3276,22 @@
             grid.innerHTML = seasons.map(s => {
                 const isActive = now >= s.start && now <= s.end;
                 const dateRange = `${new Date(s.start).toLocaleDateString()} – ${new Date(s.end).toLocaleDateString()}`;
-                const firstWinners = getPlaceWinners(s.winner, 'first');
+
+                // Show every place that has a winner, not just 1st — and every name in a place
+                // that was a genuine draw/tie, so a joint win never looks like it only had one
+                // winner. This mirrors the same PLACE_MAP handling used on the season detail page.
+                const PLACE_MEDALS = { first: '🥇', second: '🥈', third: '🥉' };
+                const placeLines = [];
+                for (const place of ['first', 'second', 'third']) {
+                    const winners = getPlaceWinners(s.winner, place);
+                    if (winners.length === 0) continue;
+                    const names = winners.map(w => w.name).join(' & ');
+                    const jointTag = winners.length > 1 ? ' 🤝' : '';
+                    placeLines.push(`<div class="flex items-center gap-2 text-xs font-bold text-slate-700"><span>${PLACE_MEDALS[place]}${jointTag}</span><span class="truncate">${names}</span></div>`);
+                }
                 let winnerLine;
-                if (firstWinners.length > 1) {
-                    winnerLine = `<div class="flex items-center gap-2 text-xs font-bold text-amber-700"><span>🥇🤝</span><span class="truncate">${firstWinners.map(w => w.name).join(' & ')}</span></div>`;
-                } else if (firstWinners.length === 1) {
-                    winnerLine = `<div class="flex items-center gap-2 text-xs font-bold text-amber-700"><span>🥇</span><span class="truncate">${firstWinners[0].name}</span></div>`;
+                if (placeLines.length > 0) {
+                    winnerLine = `<div class="space-y-1">${placeLines.join('')}</div>`;
                 } else if (isActive) {
                     winnerLine = `<div class="text-xs font-bold text-indigo-500">In progress — winners not yet announced</div>`;
                 } else {
@@ -6023,6 +6034,16 @@
         };
 
         // ===== STUDY TAB — Level 1: list of all seasons (+ General bucket) =====
+        const resetStudyHeroBackground = () => {
+            const hero = document.getElementById('study-hero-bg');
+            const scrim = document.getElementById('study-hero-scrim');
+            if (!hero) return;
+            hero.style.backgroundImage = '';
+            hero.style.backgroundColor = '';
+            hero.style.background = 'linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%)';
+            scrim?.classList.add('hidden');
+        };
+
         const renderSeasonListView = () => {
             const grid = document.getElementById('study-content-grid');
             const empty = document.getElementById('study-empty');
@@ -6031,6 +6052,7 @@
             document.getElementById('study-back-btn-wrap')?.classList.add('hidden');
             document.getElementById('study-hero-title').innerText = 'Study Zone';
             document.getElementById('study-hero-subtitle').innerText = 'Tap a season to see its study material';
+            resetStudyHeroBackground();
 
             const now = Date.now();
             const allItems = globalData.studyContent || [];
@@ -6129,26 +6151,63 @@
                 : allItems.filter(x => x.seasonId === studySelectedSeasonId);
 
             // --- Filter chips scoped to this bucket's categories only ---
+            // The old "All / Notes / Videos" media-type chips were removed — only real category
+            // folders show here now, plus an implicit "show everything in this bucket" default
+            // state when no category chip is selected.
             const categories = [...new Set(bucketItems.map(x => x.category).filter(Boolean))];
+            const hasUncategorized = bucketItems.some(x => !x.category || !x.category.trim());
+
+            // --- Folder cover as the hero background ---
+            // Only makes sense to show one photo behind the header when this bucket really is
+            // "one folder" — either a single named category with nothing uncategorized alongside
+            // it, or everything here being uncategorized (the implicit General folder) with no
+            // other named categories mixed in. If there are multiple distinct folders in view,
+            // one photo can't represent all of them, so the hero stays a plain gradient instead.
+            const hero = document.getElementById('study-hero-bg');
+            const scrim = document.getElementById('study-hero-scrim');
+            if (categories.length === 1 && !hasUncategorized) {
+                const coverKey = folderCoverKey(isGeneral ? '' : studySelectedSeasonId, categories[0]);
+                const cover = (globalData.categoryCovers || []).find(c => c.id === coverKey);
+                if (cover?.imageData) {
+                    hero.style.background = `url('${cover.imageData}')`;
+                    hero.style.backgroundSize = 'cover';
+                    hero.style.backgroundPosition = 'center';
+                    scrim?.classList.remove('hidden');
+                } else {
+                    resetStudyHeroBackground();
+                }
+            } else if (categories.length === 0 && hasUncategorized) {
+                const coverKey = folderCoverKey(isGeneral ? '' : studySelectedSeasonId, '');
+                const cover = (globalData.categoryCovers || []).find(c => c.id === coverKey);
+                if (cover?.imageData) {
+                    hero.style.background = `url('${cover.imageData}')`;
+                    hero.style.backgroundSize = 'cover';
+                    hero.style.backgroundPosition = 'center';
+                    scrim?.classList.remove('hidden');
+                } else {
+                    resetStudyHeroBackground();
+                }
+            } else {
+                resetStudyHeroBackground();
+            }
+
             if (filterBar) {
-                filterBar.innerHTML = [
-                    { val: 'all', label: '✦ All' },
-                    { val: 'instagram', label: '🖼️ Notes' },
-                    { val: 'youtube', label: '🎬 Videos' },
-                    ...categories.map(c => ({ val: c, label: c }))
-                ].map(({ val, label }) => {
-                    const isAct = studyFilterActive === val;
-                    return `<button onclick="window.setStudyFilter('${val}')" class="flex-shrink-0 px-4 py-2 rounded-full text-xs font-black transition-all ${isAct
-                        ? 'bg-white text-indigo-700 shadow-md'
-                        : 'bg-white/10 text-white/80 hover:bg-white/20'}">${label}</button>`;
-                }).join('');
+                if (categories.length === 0) {
+                    filterBar.innerHTML = '';
+                } else {
+                    filterBar.innerHTML = categories.map(c => {
+                        const isAct = studyFilterActive === c;
+                        return `<button onclick="window.setStudyFilter('${c}')" class="flex-shrink-0 px-4 py-2 rounded-full text-xs font-black transition-all ${isAct
+                            ? 'bg-white text-indigo-700 shadow-md'
+                            : 'bg-white/10 text-white/80 hover:bg-white/20'}">${c}</button>`;
+                    }).join('');
+                }
             }
 
             // --- Apply search + filter ---
             const searchTerm = (document.getElementById('study-search')?.value || '').toLowerCase().trim();
             const filteredItems = bucketItems.filter(item => {
                 const matchFilter = studyFilterActive === 'all'
-                    || item.type === studyFilterActive
                     || item.category === studyFilterActive;
                 const matchSearch = !searchTerm
                     || item.title?.toLowerCase().includes(searchTerm)
