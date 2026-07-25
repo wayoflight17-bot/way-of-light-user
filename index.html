@@ -662,10 +662,6 @@
                     <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Avg Score</div>
                     <div class="text-2xl font-black text-amber-600" id="stat-avg-score">0 XP</div>
                 </div>
-                <div class="stat-chip cursor-pointer hover:shadow-md transition-shadow" onclick="window.copyStudentId()" title="Click to copy">
-                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Student ID</div>
-                    <div class="text-lg font-black text-slate-700 font-mono" id="stat-student-id">--</div>
-                </div>
                 <div class="stat-chip cursor-pointer hover:shadow-md transition-shadow" onclick="window.switchView('view-certificates')" title="View your certificates">
                     <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">🎓 Certificates</div>
                     <div class="text-2xl font-black text-amber-600" id="stat-cert-count">0</div>
@@ -673,7 +669,7 @@
             </div>
 
             <!-- Following Feed — certificates/award letters from people you follow, Instagram home-style -->
-            <div id="following-feed-section" class="hidden-view">
+            <div id="following-feed-section" class="hidden-view max-w-xl mx-auto sm:mx-0">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
                         <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm3 3h10M7 12h10M7 16h6"/></svg>
@@ -681,14 +677,14 @@
                     </h3>
                     <button onclick="window.switchView('view-people')" class="text-xs font-bold text-indigo-500 hover:text-indigo-700">Find more →</button>
                 </div>
-                <div id="following-feed-scroller" class="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-1 px-1">
+                <div id="following-feed-scroller" class="bg-white rounded-3xl border border-slate-200 shadow-sm px-4 divide-y divide-slate-100">
                     <!-- Injected via JS -->
                 </div>
             </div>
 
             <!-- Main Content Area -->
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                <div class="lg:col-span-8 space-y-6">
+            <div class="space-y-6">
+                <div class="space-y-6">
                     <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
                         <div class="flex justify-between items-center">
                             <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
@@ -707,57 +703,6 @@
                     </div>
                     <div id="home-material-grid" class="hidden space-y-4">
                         <!-- Active season's study material injected via JS -->
-                    </div>
-                </div>
-
-                <div class="lg:col-span-4 space-y-6">
-                    <div class="glass rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden flex flex-col h-full max-h-[600px]">
-                        <div class="p-6 bg-slate-900 text-white flex flex-col gap-4">
-                            <h3 class="text-lg font-black flex items-center gap-2">🏆 Global Top 10</h3>
-                            <div class="flex bg-slate-800 rounded-xl p-1">
-                                <button onclick="window.setLbTab('alltime')" id="tab-alltime" class="flex-1 text-xs font-bold py-2 rounded-lg bg-indigo-600 text-white shadow-sm transition-all">All-Time</button>
-                                <button onclick="window.setLbTab('season')" id="tab-season" class="flex-1 text-xs font-bold py-2 rounded-lg text-slate-400 hover:text-white transition-all">Active Season</button>
-                            </div>
-                        </div>
-                        
-                        <div class="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/50" id="leaderboard-list">
-                            <div class="space-y-2 animate-pulse">
-                                <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-5 bg-slate-200 rounded"></div>
-                                        <div class="w-10 h-10 rounded-full bg-slate-200"></div>
-                                        <div class="h-3 w-20 bg-slate-200 rounded"></div>
-                                    </div>
-                                    <div class="h-3 w-10 bg-slate-200 rounded"></div>
-                                </div>
-                                <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-5 bg-slate-200 rounded"></div>
-                                        <div class="w-10 h-10 rounded-full bg-slate-200"></div>
-                                        <div class="h-3 w-24 bg-slate-200 rounded"></div>
-                                    </div>
-                                    <div class="h-3 w-10 bg-slate-200 rounded"></div>
-                                </div>
-                                <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-5 bg-slate-200 rounded"></div>
-                                        <div class="w-10 h-10 rounded-full bg-slate-200"></div>
-                                        <div class="h-3 w-16 bg-slate-200 rounded"></div>
-                                    </div>
-                                    <div class="h-3 w-10 bg-slate-200 rounded"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="p-5 bg-white border-t border-slate-200 flex justify-between items-center shadow-[0_-10px_20px_rgba(0,0,0,0.02)] z-10">
-                            <div>
-                                <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Your Rank</span>
-                                <span class="font-black text-indigo-600 text-2xl" id="my-rank-display">#--</span>
-                            </div>
-                            <button onclick="window.triggerShareCard('leaderboard', document.getElementById('my-rank-display').innerText.replace('#',''))" class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 cursor-pointer hover:bg-indigo-600 hover:text-white transition-colors" title="Share Leaderboard Rank">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-                            </button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -1129,6 +1074,56 @@
 
         <!-- List (shown when no season is selected) -->
         <div id="seasons-list-panel">
+            <!-- Global Top 10 leaderboard — moved here from Home -->
+            <div class="glass rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden mb-8">
+                <div class="p-6 bg-slate-900 text-white flex flex-col gap-4">
+                    <h3 class="text-lg font-black flex items-center gap-2">🏆 Global Top 10</h3>
+                    <div class="flex bg-slate-800 rounded-xl p-1">
+                        <button onclick="window.setLbTab('alltime')" id="tab-alltime" class="flex-1 text-xs font-bold py-2 rounded-lg bg-indigo-600 text-white shadow-sm transition-all">All-Time</button>
+                        <button onclick="window.setLbTab('season')" id="tab-season" class="flex-1 text-xs font-bold py-2 rounded-lg text-slate-400 hover:text-white transition-all">Active Season</button>
+                    </div>
+                </div>
+
+                <div class="max-h-[500px] overflow-y-auto p-4 space-y-2 bg-slate-50/50" id="leaderboard-list">
+                    <div class="space-y-2 animate-pulse">
+                        <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-5 bg-slate-200 rounded"></div>
+                                <div class="w-10 h-10 rounded-full bg-slate-200"></div>
+                                <div class="h-3 w-20 bg-slate-200 rounded"></div>
+                            </div>
+                            <div class="h-3 w-10 bg-slate-200 rounded"></div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-5 bg-slate-200 rounded"></div>
+                                <div class="w-10 h-10 rounded-full bg-slate-200"></div>
+                                <div class="h-3 w-24 bg-slate-200 rounded"></div>
+                            </div>
+                            <div class="h-3 w-10 bg-slate-200 rounded"></div>
+                        </div>
+                        <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-5 bg-slate-200 rounded"></div>
+                                <div class="w-10 h-10 rounded-full bg-slate-200"></div>
+                                <div class="h-3 w-16 bg-slate-200 rounded"></div>
+                            </div>
+                            <div class="h-3 w-10 bg-slate-200 rounded"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-5 bg-white border-t border-slate-200 flex justify-between items-center shadow-[0_-10px_20px_rgba(0,0,0,0.02)] z-10">
+                    <div>
+                        <span class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Your Rank</span>
+                        <span class="font-black text-indigo-600 text-2xl" id="my-rank-display">#--</span>
+                    </div>
+                    <button onclick="window.triggerShareCard('leaderboard', document.getElementById('my-rank-display').innerText.replace('#',''))" class="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 cursor-pointer hover:bg-indigo-600 hover:text-white transition-colors" title="Share Leaderboard Rank">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                    </button>
+                </div>
+            </div>
+
             <div>
                 <h2 class="text-2xl font-black text-slate-900">Seasons</h2>
                 <p class="text-slate-500 text-sm font-medium mt-1">Every season that's run so far, its winners, and the full leaderboard for that season specifically.</p>
@@ -2760,7 +2755,7 @@
                 await navigator.clipboard.writeText(eid);
                 showToast(`Copied: ${eid}`, "📋");
                 // Pulse all ID elements
-                document.querySelectorAll('#dash-enrollment-id, #nav-enrollment-id, #stat-student-id').forEach(el => {
+                document.querySelectorAll('#dash-enrollment-id, #nav-enrollment-id').forEach(el => {
                     el.classList.add('copy-pulse');
                     setTimeout(() => el.classList.remove('copy-pulse'), 400);
                 });
@@ -3279,6 +3274,7 @@
             }
             listPanel.classList.remove('hidden-view');
             detailPanel.classList.add('hidden-view');
+            renderGlobalLeaderboard();
 
             const grid = document.getElementById('seasons-list-grid');
             const empty = document.getElementById('seasons-list-empty');
@@ -3440,7 +3436,7 @@
                 document.getElementById('tab-season').className = "flex-1 text-xs font-bold py-2 rounded-lg bg-indigo-600 text-white shadow-sm transition-all";
                 document.getElementById('tab-alltime').className = "flex-1 text-xs font-bold py-2 rounded-lg text-slate-400 hover:text-white transition-all";
             }
-            renderDashboard();
+            renderGlobalLeaderboard();
         };
 
         // Renders one quiz/test card — shared between the Home dashboard grid and the
@@ -3558,27 +3554,10 @@
             if (homeActiveTab === 'material') requestAnimationFrame(() => initInstagramEmbeds());
         };
 
-        const renderDashboard = () => {
-            if(!currentUser || !userData) return;
-            
-            // Check for new winner popup on every dashboard render
-            checkAndShowWinnerPopup();
-            const winners = globalData.seasons.filter(s => s.winner).map(s => {
-                const fmtPlace = (place) => getPlaceWinners(s.winner, place).map(w => w.name).join(' & ');
-                if (s.winner.first) {
-                    const firstNames = fmtPlace('first');
-                    const firstXp = getPlaceWinners(s.winner, 'first')[0]?.xp;
-                    let html = `🏆 <strong>${s.name}</strong> Winners: 🥇 ${firstNames} (${firstXp} XP)`;
-                    const secondNames = fmtPlace('second');
-                    const thirdNames = fmtPlace('third');
-                    if (secondNames) html += ` &nbsp;|&nbsp; 🥈 ${secondNames}`;
-                    if (thirdNames) html += ` &nbsp;|&nbsp; 🥉 ${thirdNames}`;
-                    return html;
-                } else {
-                    return `🎉 Congratulations to <strong>${s.winner.name}</strong> for winning <strong>${s.name}</strong> with ${s.winner.xp} XP!`;
-                }
-            });
-
+        // Extracted from renderDashboard so the Global Top 10 leaderboard can live in the Seasons
+        // view instead of the Home dashboard — same rendering logic, just callable from anywhere.
+        const renderGlobalLeaderboard = () => {
+            if (!currentUser) return;
             const useSeason = currentLbTab === 'season';
             const activeSeason = getActiveSeason();
             if (useSeason && !activeSeason) {
@@ -3634,6 +3613,32 @@
                     }).join('');
                 }
             }
+        };
+
+        const renderDashboard = () => {
+            if(!currentUser || !userData) return;
+            
+            // Check for new winner popup on every dashboard render
+            checkAndShowWinnerPopup();
+            const winners = globalData.seasons.filter(s => s.winner).map(s => {
+                const fmtPlace = (place) => getPlaceWinners(s.winner, place).map(w => w.name).join(' & ');
+                if (s.winner.first) {
+                    const firstNames = fmtPlace('first');
+                    const firstXp = getPlaceWinners(s.winner, 'first')[0]?.xp;
+                    let html = `🏆 <strong>${s.name}</strong> Winners: 🥇 ${firstNames} (${firstXp} XP)`;
+                    const secondNames = fmtPlace('second');
+                    const thirdNames = fmtPlace('third');
+                    if (secondNames) html += ` &nbsp;|&nbsp; 🥈 ${secondNames}`;
+                    if (thirdNames) html += ` &nbsp;|&nbsp; 🥉 ${thirdNames}`;
+                    return html;
+                } else {
+                    return `🎉 Congratulations to <strong>${s.winner.name}</strong> for winning <strong>${s.name}</strong> with ${s.winner.xp} XP!`;
+                }
+            });
+
+            if (!document.getElementById('view-seasons').classList.contains('hidden-view')) {
+                renderGlobalLeaderboard();
+            }
 
             const myResultsAllTime = globalData.results.filter(r => r.studentId === currentUser.uid);
             const earnedXp = myResultsAllTime.reduce((sum, r) => sum + r.score, 0);
@@ -3666,8 +3671,6 @@
             if(navEnroll) navEnroll.innerText = eid || '--';
             const dashEid = document.getElementById('dash-enrollment-id');
             if(dashEid) dashEid.innerText = eid || '--';
-            const statEid = document.getElementById('stat-student-id');
-            if(statEid) statEid.innerText = eid || '--';
 
             // --- Stats strip ---
             const bestScore = myResultsAllTime.length ? Math.max(...myResultsAllTime.map(r => r.score)) : 0;
@@ -3737,12 +3740,20 @@
 
         // Shows certificates/award letters from people the current user follows, on the home
         // dashboard — same idea as Instagram's home feed only ever showing accounts you follow.
-        // A horizontally-scrollable strip so it doesn't push the rest of the dashboard down too
-        // far; tapping a card opens that person's profile straight to their Posts tab.
+        // Rendered as a real vertical post feed (same card style as the profile Achievements
+        // feed), not a thumbnail strip. Tapping a person's name/avatar opens their profile
+        // straight to Achievements, where their full posts live.
         const renderFollowingFeed = () => {
             const section = document.getElementById('following-feed-section');
             const scroller = document.getElementById('following-feed-scroller');
             if (!section || !scroller || !currentUser) return;
+
+            // Tearing down any previously-attached listeners here too, since this feed shares the
+            // same postsFeedUnsubscribes/postsFeedCache bookkeeping as the profile posts feed —
+            // only one of the two feeds is ever "live" on screen at a time in practice, so this
+            // keeps things simple without doubling up on active Firestore listeners.
+            teardownPostsFeedListeners();
+            postsFeedCache = {};
 
             if (myFollowing.size === 0) {
                 section.classList.add('hidden-view');
@@ -3752,7 +3763,7 @@
             const posts = (globalData.certificates || [])
                 .filter(c => c.status !== 'revoked' && myFollowing.has(c.studentId))
                 .sort((a, b) => (b.createdAt || b.issueDate || 0) - (a.createdAt || a.issueDate || 0))
-                .slice(0, 20); // cap the feed to the most recent 20 — this is a preview strip, not the full history
+                .slice(0, 20); // cap the feed to the most recent 20 posts from people followed
 
             if (posts.length === 0) {
                 section.classList.add('hidden-view');
@@ -3760,33 +3771,8 @@
             }
             section.classList.remove('hidden-view');
 
-            scroller.innerHTML = posts.map(c => {
-                const certId = c.certificateId || c.id;
-                const owner = globalData.users[c.studentId] || {};
-                const hasAward = !!c.awardId;
-                const dateStr = (c.createdAt || c.issueDate) ? new Date(c.createdAt || c.issueDate).toLocaleDateString() : '';
-                const PLACE_ICONS = { first: '🥇', second: '🥈', third: '🥉' };
-                const thumbHTML = c.fileType === 'pdf'
-                    ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-4xl">📕</div>`
-                    : `<img src="${c.fileData}" class="w-full aspect-square object-cover bg-slate-100">`;
-
-                return `
-                <button onclick="window.openProfileView('${c.studentId}', 'feed')" class="snap-start shrink-0 w-44 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-left hover:shadow-md transition-shadow">
-                    <div class="relative">
-                        ${thumbHTML}
-                        ${hasAward ? `<div class="absolute top-2 right-2 bg-slate-900/70 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">🏅</div>` : ''}
-                        ${c.winnerPlace ? `<div class="absolute top-2 left-2 text-lg drop-shadow">${PLACE_ICONS[c.winnerPlace] || ''}</div>` : ''}
-                    </div>
-                    <div class="p-3">
-                        <div class="flex items-center gap-1.5 mb-1">
-                            <img src="${owner.avatar || AVATARS[0]}" class="w-5 h-5 rounded-full border border-slate-200 object-cover shrink-0">
-                            <span class="font-black text-slate-800 text-xs truncate">${owner.name || 'Student'}</span>
-                        </div>
-                        <p class="font-bold text-slate-600 text-[11px] leading-snug line-clamp-2">${c.title}</p>
-                        ${dateStr ? `<p class="text-[9px] text-slate-400 font-bold mt-1">${dateStr}</p>` : ''}
-                    </div>
-                </button>`;
-            }).join('');
+            scroller.innerHTML = posts.map(c => buildPostCardHTML(c, globalData.users[c.studentId] || {})).join('');
+            attachPostFeedListeners(posts);
         };
 
         let tempAvatar = '';
@@ -5393,91 +5379,81 @@
                 .sort((a, b) => (b.createdAt || b.issueDate || 0) - (a.createdAt || a.issueDate || 0));
         };
 
-        window.renderProfilePostsFeed = (uid) => {
-            teardownPostsFeedListeners();
-            postsFeedCache = {};
+        // Shared post-card builder — one certificate/award-letter record rendered as a single
+        // Instagram-style post (swipeable image if there's an award letter, like button, comment
+        // thread). Used by both the profile Achievements feed and the Home "following" feed, so
+        // both always look and behave identically.
+        const buildPostCardHTML = (c, owner) => {
+            const certId = c.certificateId || c.id;
+            const postId = postIdForCert(certId); // one shared like/comment thread for the whole post
+            const hasAward = !!c.awardId;
+            const dateStr = (c.createdAt || c.issueDate) ? new Date(c.createdAt || c.issueDate).toLocaleDateString() : '';
+            const winnerPlace = c.winnerPlace;
+            const PLACE_ICONS = { first: '🥇', second: '🥈', third: '🥉' };
 
-            const feedEl = document.getElementById('pv-posts-feed');
-            const emptyEl = document.getElementById('pv-posts-empty');
-            if (!feedEl) return;
+            // Certificates and award letters vary a lot in size/aspect ratio (landscape,
+            // portrait, different page proportions), so the feed shows the COMPLETE document
+            // rather than force-cropping it into a square — object-contain on a flexible-height
+            // container means nothing gets cut off, whatever shape the uploaded file is.
+            const certImgHTML = c.fileType === 'pdf'
+                ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
+                : `<img src="${c.fileData}" class="w-full max-h-[32rem] object-contain bg-slate-100 shrink-0 snap-center">`;
+            const awardImgHTML = hasAward ? (c.awardFileType === 'pdf'
+                ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
+                : `<img src="${c.awardFileData}" class="w-full max-h-[32rem] object-contain bg-slate-100 shrink-0 snap-center">`) : '';
 
-            const posts = buildProfilePostsList(uid);
-            if (posts.length === 0) {
-                feedEl.innerHTML = '';
-                emptyEl.classList.remove('hidden-view');
-                return;
-            }
-            emptyEl.classList.add('hidden-view');
-
-            const owner = globalData.users[uid] || {};
-
-            feedEl.innerHTML = posts.map(c => {
-                const certId = c.certificateId || c.id;
-                const postId = postIdForCert(certId); // one shared like/comment thread for the whole post
-                const hasAward = !!c.awardId;
-                const dateStr = (c.createdAt || c.issueDate) ? new Date(c.createdAt || c.issueDate).toLocaleDateString() : '';
-                const winnerPlace = c.winnerPlace;
-                const PLACE_ICONS = { first: '🥇', second: '🥈', third: '🥉' };
-
-                // Certificates and award letters vary a lot in size/aspect ratio (landscape,
-                // portrait, different page proportions), so the feed shows the COMPLETE document
-                // rather than force-cropping it into a square — object-contain on a flexible-height
-                // container means nothing gets cut off, whatever shape the uploaded file is.
-                const certImgHTML = c.fileType === 'pdf'
-                    ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
-                    : `<img src="${c.fileData}" class="w-full max-h-[32rem] object-contain bg-slate-100 shrink-0 snap-center">`;
-                const awardImgHTML = hasAward ? (c.awardFileType === 'pdf'
-                    ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
-                    : `<img src="${c.awardFileData}" class="w-full max-h-[32rem] object-contain bg-slate-100 shrink-0 snap-center">`) : '';
-
-                return `
-                <div class="py-5 post-card" data-post-id="${postId}">
-                    <div class="flex items-center gap-2.5 px-1 mb-3">
+            return `
+            <div class="py-5 post-card" data-post-id="${postId}">
+                <div class="flex items-center gap-2.5 px-1 mb-3">
+                    <button onclick="window.openProfileView('${c.studentId}', 'feed')" class="flex items-center gap-2.5 text-left">
                         <img src="${owner.avatar || AVATARS[0]}" class="w-8 h-8 rounded-full border border-slate-200 object-cover">
                         <div class="min-w-0 flex-1">
                             <div class="font-black text-slate-800 text-sm truncate">${owner.name || 'Student'}</div>
                             <div class="text-[10px] text-slate-400 font-bold">🎓 Certificate${hasAward ? ' + 🏅 Award Letter' : ''}${dateStr ? ` · ${dateStr}` : ''}</div>
                         </div>
-                        ${winnerPlace ? `<span class="text-xl">${PLACE_ICONS[winnerPlace] || ''}</span>` : ''}
+                    </button>
+                    ${winnerPlace ? `<span class="text-xl ml-auto">${PLACE_ICONS[winnerPlace] || ''}</span>` : ''}
+                </div>
+
+                <div class="relative rounded-2xl overflow-hidden border border-slate-100">
+                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none">
+                        <button onclick="window.viewCertFile('${certId}')" class="block w-full shrink-0 snap-center">${certImgHTML}</button>
+                        ${hasAward ? `<button onclick="window.viewAwardFile('${certId}')" class="block w-full shrink-0 snap-center">${awardImgHTML}</button>` : ''}
                     </div>
+                    ${hasAward ? `
+                    <div class="absolute top-3 right-3 bg-slate-900/70 text-white text-[9px] font-black px-2 py-1 rounded-full pointer-events-none">Swipe for Award →</div>
+                    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none">
+                        <span class="w-1.5 h-1.5 rounded-full bg-white/90"></span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-white/50"></span>
+                    </div>` : ''}
+                </div>
 
-                    <div class="relative rounded-2xl overflow-hidden border border-slate-100">
-                        <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none">
-                            <button onclick="window.viewCertFile('${certId}')" class="block w-full shrink-0 snap-center">${certImgHTML}</button>
-                            ${hasAward ? `<button onclick="window.viewAwardFile('${certId}')" class="block w-full shrink-0 snap-center">${awardImgHTML}</button>` : ''}
-                        </div>
-                        ${hasAward ? `
-                        <div class="absolute top-3 right-3 bg-slate-900/70 text-white text-[9px] font-black px-2 py-1 rounded-full pointer-events-none">Swipe for Award →</div>
-                        <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 pointer-events-none">
-                            <span class="w-1.5 h-1.5 rounded-full bg-white/90"></span>
-                            <span class="w-1.5 h-1.5 rounded-full bg-white/50"></span>
-                        </div>` : ''}
+                <div class="px-1 mt-3">
+                    <div class="flex items-center gap-4 mb-2">
+                        <button onclick="window.toggleLikePost('${postId}')" id="like-btn-${postId}" class="flex items-center gap-1.5 text-2xl transition-transform active:scale-90">
+                            <span id="like-icon-${postId}">🤍</span>
+                        </button>
+                        <button onclick="window.focusCommentInput('${postId}')" class="flex items-center gap-1.5 text-xl text-slate-600">
+                            💬
+                        </button>
                     </div>
+                    <div id="like-count-${postId}" class="font-black text-slate-800 text-sm mb-1">0 likes</div>
+                    <div class="font-bold text-slate-700 text-sm mb-2"><span class="font-black">${owner.name || 'Student'}</span> ${c.title}</div>
 
-                    <div class="px-1 mt-3">
-                        <div class="flex items-center gap-4 mb-2">
-                            <button onclick="window.toggleLikePost('${postId}')" id="like-btn-${postId}" class="flex items-center gap-1.5 text-2xl transition-transform active:scale-90">
-                                <span id="like-icon-${postId}">🤍</span>
-                            </button>
-                            <button onclick="window.focusCommentInput('${postId}')" class="flex items-center gap-1.5 text-xl text-slate-600">
-                                💬
-                            </button>
-                        </div>
-                        <div id="like-count-${postId}" class="font-black text-slate-800 text-sm mb-1">0 likes</div>
-                        <div class="font-bold text-slate-700 text-sm mb-2"><span class="font-black">${owner.name || 'Student'}</span> ${c.title}</div>
+                    <div id="comments-list-${postId}" class="space-y-2 mb-2"></div>
+                    <button onclick="window.toggleCommentsExpanded('${postId}')" id="comments-toggle-${postId}" class="hidden text-xs font-bold text-slate-400 hover:text-slate-600 mb-2"></button>
 
-                        <div id="comments-list-${postId}" class="space-y-2 mb-2"></div>
-                        <button onclick="window.toggleCommentsExpanded('${postId}')" id="comments-toggle-${postId}" class="hidden text-xs font-bold text-slate-400 hover:text-slate-600 mb-2"></button>
-
-                        <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
-                            <input type="text" id="comment-input-${postId}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter') window.submitComment('${postId}')" class="flex-1 text-sm font-medium px-3 py-2 rounded-full bg-slate-50 border border-slate-100 focus:border-indigo-300 outline-none">
-                            <button onclick="window.submitComment('${postId}')" class="text-indigo-600 font-black text-sm px-2">Post</button>
-                        </div>
+                    <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                        <input type="text" id="comment-input-${postId}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter') window.submitComment('${postId}')" class="flex-1 text-sm font-medium px-3 py-2 rounded-full bg-slate-50 border border-slate-100 focus:border-indigo-300 outline-none">
+                        <button onclick="window.submitComment('${postId}')" class="text-indigo-600 font-black text-sm px-2">Post</button>
                     </div>
-                </div>`;
-            }).join('');
+                </div>
+            </div>`;
+        };
 
-            // Attach a live like/comment listener per post now that the cards exist in the DOM.
+        // Attaches live like/comment listeners for a set of certificate records — shared by both
+        // feed renderers so listener setup/teardown behavior always matches.
+        const attachPostFeedListeners = (posts) => {
             posts.forEach(c => {
                 const postId = postIdForCert(c.certificateId || c.id);
                 postsFeedUnsubscribes.push(onSnapshot(getPostLikesCol(postId), snap => {
@@ -5496,6 +5472,27 @@
                     renderPostCommentsUI(postId);
                 }, err => console.warn('Comments listener error:', err.code)));
             });
+        };
+
+        window.renderProfilePostsFeed = (uid) => {
+            teardownPostsFeedListeners();
+            postsFeedCache = {};
+
+            const feedEl = document.getElementById('pv-posts-feed');
+            const emptyEl = document.getElementById('pv-posts-empty');
+            if (!feedEl) return;
+
+            const posts = buildProfilePostsList(uid);
+            if (posts.length === 0) {
+                feedEl.innerHTML = '';
+                emptyEl.classList.remove('hidden-view');
+                return;
+            }
+            emptyEl.classList.add('hidden-view');
+
+            const owner = globalData.users[uid] || {};
+            feedEl.innerHTML = posts.map(c => buildPostCardHTML(c, owner)).join('');
+            attachPostFeedListeners(posts);
         };
 
         const renderPostLikeUI = (postId) => {
@@ -6161,30 +6158,36 @@
             // it, or everything here being uncategorized (the implicit General folder) with no
             // other named categories mixed in. If there are multiple distinct folders in view,
             // one photo can't represent all of them, so the hero stays a plain gradient instead.
+            //
+            // Photo priority: a category-specific cover (if admin set one for this exact folder)
+            // wins first; otherwise falls back to the season's single folder photo (the same one
+            // shown as the small thumbnail everywhere else) — so uploading ONE photo per season is
+            // enough to have it show consistently as both the thumbnail and the background, rather
+            // than needing two separate uploads that could end up showing different pictures.
             const hero = document.getElementById('study-hero-bg');
             const scrim = document.getElementById('study-hero-scrim');
-            if (categories.length === 1 && !hasUncategorized) {
+            const applyHeroImage = (imageData) => {
+                hero.style.background = `url('${imageData}')`;
+                hero.style.backgroundSize = 'cover';
+                hero.style.backgroundPosition = 'center';
+                scrim?.classList.remove('hidden');
+            };
+            if (!hero) {
+                // Defensive guard — if this ever runs before the hero element exists in the DOM,
+                // skip the cover-image logic entirely rather than throwing and interrupting the
+                // rest of this render (which would otherwise leave parts of the page unrendered).
+            } else if (categories.length === 1 && !hasUncategorized) {
                 const coverKey = folderCoverKey(isGeneral ? '' : studySelectedSeasonId, categories[0]);
                 const cover = (globalData.categoryCovers || []).find(c => c.id === coverKey);
-                if (cover?.imageData) {
-                    hero.style.background = `url('${cover.imageData}')`;
-                    hero.style.backgroundSize = 'cover';
-                    hero.style.backgroundPosition = 'center';
-                    scrim?.classList.remove('hidden');
-                } else {
-                    resetStudyHeroBackground();
-                }
+                if (cover?.imageData) applyHeroImage(cover.imageData);
+                else if (season?.folderImage) applyHeroImage(season.folderImage);
+                else resetStudyHeroBackground();
             } else if (categories.length === 0 && hasUncategorized) {
                 const coverKey = folderCoverKey(isGeneral ? '' : studySelectedSeasonId, '');
                 const cover = (globalData.categoryCovers || []).find(c => c.id === coverKey);
-                if (cover?.imageData) {
-                    hero.style.background = `url('${cover.imageData}')`;
-                    hero.style.backgroundSize = 'cover';
-                    hero.style.backgroundPosition = 'center';
-                    scrim?.classList.remove('hidden');
-                } else {
-                    resetStudyHeroBackground();
-                }
+                if (cover?.imageData) applyHeroImage(cover.imageData);
+                else if (season?.folderImage) applyHeroImage(season.folderImage);
+                else resetStudyHeroBackground();
             } else {
                 resetStudyHeroBackground();
             }
