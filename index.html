@@ -3745,13 +3745,6 @@
             const scroller = document.getElementById('following-feed-scroller');
             if (!section || !scroller || !currentUser) return;
 
-            // Tearing down any previously-attached listeners here too, since this feed shares the
-            // same postsFeedUnsubscribes/postsFeedCache bookkeeping as the profile posts feed —
-            // only one of the two feeds is ever "live" on screen at a time in practice, so this
-            // keeps things simple without doubling up on active Firestore listeners.
-            teardownPostsFeedListeners();
-            postsFeedCache = {};
-
             if (myFollowing.size === 0) {
                 section.classList.add('hidden-view');
                 return;
@@ -3768,8 +3761,13 @@
             }
             section.classList.remove('hidden-view');
 
+            // Own namespaced listener set ('home') — rebuilding this feed never touches the
+            // profile page's ('profile') listeners, even if both happen to be mounted at once.
+            teardownPostsFeedListeners('home');
+            postsFeedCacheByFeed.home = {};
+
             scroller.innerHTML = posts.map(c => buildPostCardHTML(c, globalData.users[c.studentId] || {})).join('');
-            attachPostFeedListeners(posts);
+            attachPostFeedListeners(posts, 'home');
         };
 
         let tempAvatar = '';
@@ -5362,12 +5360,18 @@
         // since they're both part of the same achievement being celebrated.
         // Only live listeners for whichever post is currently expanded are kept active, so
         // browsing a profile with many posts doesn't open dozens of simultaneous subscriptions.
-        let postsFeedUnsubscribes = []; // active like/comment listeners for the currently-open profile's feed
-        let postsFeedCache = {};        // postId -> { likes: [...], comments: [...] } — drives re-renders
+        //
+        // Each feed (Home's "following" feed, and a profile's Achievements feed) gets its OWN
+        // independent set of listeners/cache, keyed by feed name — sharing one global set used to
+        // mean re-rendering one feed (e.g. a background dashboard refresh) would tear down the
+        // other feed's live listeners too, even while it was the one currently on screen, making
+        // it look like likes/comments — or the whole feed — had silently stopped working.
+        const postsFeedUnsubscribesByFeed = { home: [], profile: [] };
+        const postsFeedCacheByFeed = { home: {}, profile: {} }; // feedKey -> postId -> { likes, comments }
 
-        const teardownPostsFeedListeners = () => {
-            postsFeedUnsubscribes.forEach(u => u());
-            postsFeedUnsubscribes = [];
+        const teardownPostsFeedListeners = (feedKey) => {
+            (postsFeedUnsubscribesByFeed[feedKey] || []).forEach(u => u());
+            postsFeedUnsubscribesByFeed[feedKey] = [];
         };
 
         const buildProfilePostsList = (uid) => {
@@ -5394,25 +5398,29 @@
             // container means nothing gets cut off, whatever shape the uploaded file is.
             const certImgHTML = c.fileType === 'pdf'
                 ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
-                : `<img src="${c.fileData}" class="w-full max-h-[32rem] object-contain bg-slate-100 shrink-0 snap-center">`;
+                : `<img src="${c.fileData}" class="w-full max-h-[32rem] object-contain bg-black shrink-0 snap-center">`;
             const awardImgHTML = hasAward ? (c.awardFileType === 'pdf'
                 ? `<div class="w-full aspect-square bg-slate-100 flex items-center justify-center text-6xl shrink-0 snap-center">📕</div>`
-                : `<img src="${c.awardFileData}" class="w-full max-h-[32rem] object-contain bg-slate-100 shrink-0 snap-center">`) : '';
+                : `<img src="${c.awardFileData}" class="w-full max-h-[32rem] object-contain bg-black shrink-0 snap-center">`) : '';
 
             return `
-            <div class="py-5 post-card" data-post-id="${postId}">
-                <div class="flex items-center gap-2.5 px-1 mb-3">
-                    <button onclick="window.openProfileView('${c.studentId}', 'feed')" class="flex items-center gap-2.5 text-left">
-                        <img src="${owner.avatar || AVATARS[0]}" class="w-8 h-8 rounded-full border border-slate-200 object-cover">
+            <div class="pb-4 post-card border-b border-slate-100 last:border-0" data-post-id="${postId}">
+                <div class="flex items-center gap-2.5 px-3 py-2.5">
+                    <button onclick="window.openProfileView('${c.studentId}', 'feed')" class="flex items-center gap-2.5 text-left flex-1 min-w-0">
+                        <img src="${owner.avatar || AVATARS[0]}" class="w-9 h-9 rounded-full border border-slate-200 object-cover shrink-0">
                         <div class="min-w-0 flex-1">
                             <div class="font-black text-slate-800 text-sm truncate">${owner.name || 'Student'}</div>
                             <div class="text-[10px] text-slate-400 font-bold">🎓 Certificate${hasAward ? ' + 🏅 Award Letter' : ''}${dateStr ? ` · ${dateStr}` : ''}</div>
                         </div>
                     </button>
-                    ${winnerPlace ? `<span class="text-xl ml-auto">${PLACE_ICONS[winnerPlace] || ''}</span>` : ''}
+                    ${winnerPlace ? `<span class="text-xl">${PLACE_ICONS[winnerPlace] || ''}</span>` : ''}
+                    <button class="p-1 text-slate-500 shrink-0" title="More options">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+                    </button>
                 </div>
 
-                <div class="relative rounded-2xl overflow-hidden border border-slate-100">
+                <!-- Full-bleed image, edge-to-edge, no border/rounding — matches a real feed post -->
+                <div class="relative">
                     <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none">
                         <button onclick="window.viewCertFile('${certId}')" class="block w-full shrink-0 snap-center">${certImgHTML}</button>
                         ${hasAward ? `<button onclick="window.viewAwardFile('${certId}')" class="block w-full shrink-0 snap-center">${awardImgHTML}</button>` : ''}
@@ -5425,22 +5433,32 @@
                     </div>` : ''}
                 </div>
 
-                <div class="px-1 mt-3">
-                    <div class="flex items-center gap-4 mb-2">
-                        <button onclick="window.toggleLikePost('${postId}')" id="like-btn-${postId}" class="flex items-center gap-1.5 text-2xl transition-transform active:scale-90">
-                            <span id="like-icon-${postId}">🤍</span>
+                <!-- Action row — heart / comment / share on the left, bookmark on the right, same as a real feed -->
+                <div class="flex items-center justify-between px-3 pt-2.5 pb-1">
+                    <div class="flex items-center gap-4">
+                        <button onclick="window.toggleLikePost('${postId}')" id="like-btn-${postId}" class="transition-transform active:scale-90 text-slate-800">
+                            <svg id="like-icon-${postId}" class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
                         </button>
-                        <button onclick="window.focusCommentInput('${postId}')" class="flex items-center gap-1.5 text-xl text-slate-600">
-                            💬
+                        <button onclick="window.focusCommentInput('${postId}')" class="text-slate-800">
+                            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>
+                        </button>
+                        <button class="text-slate-800" title="Share">
+                            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
                         </button>
                     </div>
+                    <button class="text-slate-800" title="Save">
+                        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z"/></svg>
+                    </button>
+                </div>
+
+                <div class="px-3">
                     <div id="like-count-${postId}" class="font-black text-slate-800 text-sm mb-1">0 likes</div>
-                    <div class="font-bold text-slate-700 text-sm mb-2"><span class="font-black">${owner.name || 'Student'}</span> ${c.title}</div>
+                    <div class="font-bold text-slate-700 text-sm mb-1"><span class="font-black">${owner.name || 'Student'}</span> ${c.title}</div>
 
-                    <div id="comments-list-${postId}" class="space-y-2 mb-2"></div>
-                    <button onclick="window.toggleCommentsExpanded('${postId}')" id="comments-toggle-${postId}" class="hidden text-xs font-bold text-slate-400 hover:text-slate-600 mb-2"></button>
+                    <div id="comments-list-${postId}" class="space-y-2 mb-1"></div>
+                    <button onclick="window.toggleCommentsExpanded('${postId}')" id="comments-toggle-${postId}" class="hidden text-xs font-bold text-slate-400 hover:text-slate-600 mb-1"></button>
 
-                    <div class="flex items-center gap-2 pt-2 border-t border-slate-100">
+                    <div class="flex items-center gap-2 pt-2 border-t border-slate-100 mt-2">
                         <input type="text" id="comment-input-${postId}" placeholder="Add a comment…" onkeydown="if(event.key==='Enter') window.submitComment('${postId}')" class="flex-1 text-sm font-medium px-3 py-2 rounded-full bg-slate-50 border border-slate-100 focus:border-indigo-300 outline-none">
                         <button onclick="window.submitComment('${postId}')" class="text-indigo-600 font-black text-sm px-2">Post</button>
                     </div>
@@ -5450,30 +5468,32 @@
 
         // Attaches live like/comment listeners for a set of certificate records — shared by both
         // feed renderers so listener setup/teardown behavior always matches.
-        const attachPostFeedListeners = (posts) => {
+        const attachPostFeedListeners = (posts, feedKey) => {
             posts.forEach(c => {
                 const postId = postIdForCert(c.certificateId || c.id);
-                postsFeedUnsubscribes.push(onSnapshot(getPostLikesCol(postId), snap => {
+                postsFeedUnsubscribesByFeed[feedKey].push(onSnapshot(getPostLikesCol(postId), snap => {
                     const likes = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
-                    postsFeedCache[postId] = postsFeedCache[postId] || {};
-                    postsFeedCache[postId].likes = likes;
-                    renderPostLikeUI(postId);
+                    const cache = postsFeedCacheByFeed[feedKey];
+                    cache[postId] = cache[postId] || {};
+                    cache[postId].likes = likes;
+                    renderPostLikeUI(postId, feedKey);
                 }, err => console.warn('Likes listener error:', err.code)));
 
-                postsFeedUnsubscribes.push(onSnapshot(getPostCommentsCol(postId), snap => {
+                postsFeedUnsubscribesByFeed[feedKey].push(onSnapshot(getPostCommentsCol(postId), snap => {
                     const comments = snap.docs
                         .map(d => ({ id: d.id, ...d.data() }))
                         .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-                    postsFeedCache[postId] = postsFeedCache[postId] || {};
-                    postsFeedCache[postId].comments = comments;
-                    renderPostCommentsUI(postId);
+                    const cache = postsFeedCacheByFeed[feedKey];
+                    cache[postId] = cache[postId] || {};
+                    cache[postId].comments = comments;
+                    renderPostCommentsUI(postId, feedKey);
                 }, err => console.warn('Comments listener error:', err.code)));
             });
         };
 
         window.renderProfilePostsFeed = (uid) => {
-            teardownPostsFeedListeners();
-            postsFeedCache = {};
+            teardownPostsFeedListeners('profile');
+            postsFeedCacheByFeed.profile = {};
 
             const feedEl = document.getElementById('pv-posts-feed');
             const emptyEl = document.getElementById('pv-posts-empty');
@@ -5489,24 +5509,30 @@
 
             const owner = globalData.users[uid] || {};
             feedEl.innerHTML = posts.map(c => buildPostCardHTML(c, owner)).join('');
-            attachPostFeedListeners(posts);
+            attachPostFeedListeners(posts, 'profile');
         };
 
-        const renderPostLikeUI = (postId) => {
-            const likes = postsFeedCache[postId]?.likes || [];
+        const renderPostLikeUI = (postId, feedKey) => {
+            const likes = postsFeedCacheByFeed[feedKey]?.[postId]?.likes || [];
             const iconEl = document.getElementById(`like-icon-${postId}`);
             const countEl = document.getElementById(`like-count-${postId}`);
             if (!iconEl || !countEl) return;
             const iLiked = currentUser && likes.some(l => l.uid === currentUser.uid);
-            iconEl.innerText = iLiked ? '❤️' : '🤍';
+            if (iLiked) {
+                iconEl.setAttribute('fill', '#ef4444');
+                iconEl.setAttribute('stroke', '#ef4444');
+            } else {
+                iconEl.setAttribute('fill', 'none');
+                iconEl.setAttribute('stroke', 'currentColor');
+            }
             countEl.innerText = `${likes.length} ${likes.length === 1 ? 'like' : 'likes'}`;
         };
 
         const COMMENTS_COLLAPSED_COUNT = 3;
         let expandedComments = new Set(); // postIds where the user chose to see all comments
 
-        const renderPostCommentsUI = (postId) => {
-            const comments = postsFeedCache[postId]?.comments || [];
+        const renderPostCommentsUI = (postId, feedKey) => {
+            const comments = postsFeedCacheByFeed[feedKey]?.[postId]?.comments || [];
             const listEl = document.getElementById(`comments-list-${postId}`);
             const toggleEl = document.getElementById(`comments-toggle-${postId}`);
             if (!listEl) return;
@@ -5543,7 +5569,10 @@
             } else {
                 expandedComments.add(postId);
             }
-            renderPostCommentsUI(postId);
+            // A given post is only ever rendered in one feed's DOM at a time in practice, so try
+            // whichever feed's cache actually has this post's comments.
+            const feedKey = postsFeedCacheByFeed.home[postId] ? 'home' : 'profile';
+            renderPostCommentsUI(postId, feedKey);
         };
 
         window.focusCommentInput = (postId) => {
@@ -5552,7 +5581,7 @@
 
         window.toggleLikePost = async (postId) => {
             if (!currentUser) return showToast("Please sign in to like posts.", "⚠️");
-            const likes = postsFeedCache[postId]?.likes || [];
+            const likes = postsFeedCacheByFeed.home[postId]?.likes || postsFeedCacheByFeed.profile[postId]?.likes || [];
             const alreadyLiked = likes.some(l => l.uid === currentUser.uid);
             try {
                 if (alreadyLiked) {
