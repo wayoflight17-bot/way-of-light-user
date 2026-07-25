@@ -967,7 +967,8 @@
     <div id="view-test" class="hidden-view fade-in pb-16 app-content-offset">
 
         <!-- Hero header -->
-        <div style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%)" class="px-4 pt-10 pb-16 mb-0 relative overflow-hidden">
+        <div id="test-hero-bg" style="background:linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%)" class="px-4 pt-10 pb-16 mb-0 relative overflow-hidden bg-cover bg-center transition-all duration-500">
+            <div id="test-hero-scrim" class="hidden absolute inset-0 bg-gradient-to-b from-slate-900/50 via-slate-900/65 to-slate-900/85 pointer-events-none"></div>
             <div style="position:absolute;top:-60px;right:-60px;width:220px;height:220px;border-radius:50%;background:rgba(255,255,255,0.04);pointer-events:none"></div>
             <div style="position:absolute;bottom:-40px;left:-40px;width:160px;height:160px;border-radius:50%;background:rgba(99,102,241,0.12);pointer-events:none"></div>
             <div class="max-w-3xl mx-auto relative z-10">
@@ -1699,7 +1700,7 @@
         let userData = null; 
         let pendingGoogleUser = null; 
         let authMethod = null;
-        let globalData = { users: {}, results: [], quizzes: [], config: {}, seasons: [], certificates: [], studyContent: [], categoryCovers: [] };
+        let globalData = { users: {}, results: [], quizzes: [], config: {}, seasons: [], certificates: [], studyContent: [] };
         let activeSession = null;
 
         // ===========================================================================
@@ -3143,16 +3144,6 @@
 
             unsubscribes.push(onSnapshot(getPublicCol('study_content'), snapshot => {
                 globalData.studyContent = snapshot.empty ? [] : snapshot.docs.map(d => ({id: d.id, ...d.data()}));
-                if (!document.getElementById('view-study').classList.contains('hidden-view')) {
-                    window.renderStudyView();
-                }
-                if (!document.getElementById('view-dashboard').classList.contains('hidden-view')) {
-                    renderHomeMaterialGrid(getActiveSeason());
-                }
-            }));
-
-            unsubscribes.push(onSnapshot(getPublicCol('study_category_covers'), snapshot => {
-                globalData.categoryCovers = snapshot.empty ? [] : snapshot.docs.map(d => ({id: d.id, ...d.data()}));
                 if (!document.getElementById('view-study').classList.contains('hidden-view')) {
                     window.renderStudyView();
                 }
@@ -6150,46 +6141,22 @@
             // folders show here now, plus an implicit "show everything in this bucket" default
             // state when no category chip is selected.
             const categories = [...new Set(bucketItems.map(x => x.category).filter(Boolean))];
-            const hasUncategorized = bucketItems.some(x => !x.category || !x.category.trim());
 
-            // --- Folder cover as the hero background ---
-            // Only makes sense to show one photo behind the header when this bucket really is
-            // "one folder" — either a single named category with nothing uncategorized alongside
-            // it, or everything here being uncategorized (the implicit General folder) with no
-            // other named categories mixed in. If there are multiple distinct folders in view,
-            // one photo can't represent all of them, so the hero stays a plain gradient instead.
-            //
-            // Photo priority: a category-specific cover (if admin set one for this exact folder)
-            // wins first; otherwise falls back to the season's single folder photo (the same one
-            // shown as the small thumbnail everywhere else) — so uploading ONE photo per season is
-            // enough to have it show consistently as both the thumbnail and the background, rather
-            // than needing two separate uploads that could end up showing different pictures.
+            // --- Hero background: one photo per season, from season.folderImage ---
+            // The same folder photo shown as the season's thumbnail (in both Study Zone and Test
+            // Zone lists) is used as this hero's background too — one photo per season, no
+            // separate per-folder cover system. General has no season, so no background photo.
             const hero = document.getElementById('study-hero-bg');
             const scrim = document.getElementById('study-hero-scrim');
-            const applyHeroImage = (imageData) => {
-                hero.style.background = `url('${imageData}')`;
-                hero.style.backgroundSize = 'cover';
-                hero.style.backgroundPosition = 'center';
-                scrim?.classList.remove('hidden');
-            };
-            if (!hero) {
-                // Defensive guard — if this ever runs before the hero element exists in the DOM,
-                // skip the cover-image logic entirely rather than throwing and interrupting the
-                // rest of this render (which would otherwise leave parts of the page unrendered).
-            } else if (categories.length === 1 && !hasUncategorized) {
-                const coverKey = folderCoverKey(isGeneral ? '' : studySelectedSeasonId, categories[0]);
-                const cover = (globalData.categoryCovers || []).find(c => c.id === coverKey);
-                if (cover?.imageData) applyHeroImage(cover.imageData);
-                else if (season?.folderImage) applyHeroImage(season.folderImage);
-                else resetStudyHeroBackground();
-            } else if (categories.length === 0 && hasUncategorized) {
-                const coverKey = folderCoverKey(isGeneral ? '' : studySelectedSeasonId, '');
-                const cover = (globalData.categoryCovers || []).find(c => c.id === coverKey);
-                if (cover?.imageData) applyHeroImage(cover.imageData);
-                else if (season?.folderImage) applyHeroImage(season.folderImage);
-                else resetStudyHeroBackground();
-            } else {
-                resetStudyHeroBackground();
+            if (hero) {
+                if (season?.folderImage) {
+                    hero.style.background = `url('${season.folderImage}')`;
+                    hero.style.backgroundSize = 'cover';
+                    hero.style.backgroundPosition = 'center';
+                    scrim?.classList.remove('hidden');
+                } else {
+                    resetStudyHeroBackground();
+                }
             }
 
             if (filterBar) {
@@ -6237,12 +6204,6 @@
         // rather than a thin, easy-to-miss text label, specifically so students always know
         // which portion a given post belongs to. Items with no category set still get a clearly
         // labeled "General" section instead of silently appearing with no heading at all.
-        // Deterministic key matching the admin panel's folderCoverKey exactly — must stay in sync
-        // with admin.html's version, since this is how a cover image set by admin is looked up here.
-        const folderCoverKey = (seasonId, category) => {
-            const safeCat = (category || '__general__').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'general';
-            return `${seasonId || 'nogeneral'}__${safeCat}`;
-        };
 
         const renderMaterialGroupedByPortion = (items) => {
             const groups = {};
@@ -6266,16 +6227,10 @@
                 const isGeneralGroup = key === '__general__';
                 const label = isGeneralGroup ? 'General' : key;
                 const colors = sectionColors[i % sectionColors.length];
-                const coverKey = folderCoverKey(groupItems[0]?.seasonId, isGeneralGroup ? '' : key);
-                const cover = (globalData.categoryCovers || []).find(c => c.id === coverKey);
-                const coverImgHTML = cover?.imageData
-                    ? `<img src="${cover.imageData}" class="w-10 h-10 rounded-xl object-cover border ${colors.border} flex-shrink-0">`
-                    : '';
                 return `
                 <div class="mb-0">
                     <div class="flex items-center gap-3 mb-4 ${colors.bg} border ${colors.border} rounded-2xl px-4 py-3">
-                        ${coverImgHTML}
-                        ${!coverImgHTML ? `<span class="w-2 h-2 rounded-full ${colors.dot} flex-shrink-0"></span>` : ''}
+                        <span class="w-2 h-2 rounded-full ${colors.dot} flex-shrink-0"></span>
                         <span class="font-black ${colors.text} text-sm flex-1 min-w-0 truncate">${label}</span>
                         <span class="text-[10px] font-black ${colors.text} bg-white/70 px-2 py-1 rounded-full flex-shrink-0">${groupItems.length} ${groupItems.length === 1 ? 'item' : 'items'}</span>
                     </div>
@@ -6344,6 +6299,11 @@
             document.getElementById('test-back-btn-wrap')?.classList.add('hidden');
             document.getElementById('test-hero-title').innerText = 'Test Zone';
             document.getElementById('test-hero-subtitle').innerText = 'Tap a season to see its tests';
+            const testHeroReset = document.getElementById('test-hero-bg');
+            if (testHeroReset) {
+                testHeroReset.style.background = 'linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%)';
+                document.getElementById('test-hero-scrim')?.classList.add('hidden');
+            }
 
             const now = Date.now();
             const allQuizzes = (MASTER_QUIZZES || []).filter(q => !q.restrictedTo || q.restrictedTo.length === 0 || q.restrictedTo.includes(currentUser.uid));
@@ -6429,6 +6389,23 @@
             document.getElementById('test-hero-subtitle').innerText = isGeneral
                 ? 'Tests not tied to a specific season'
                 : `${new Date(season.start).toLocaleDateString('en-IN',{day:'numeric',month:'short'})} — ${new Date(season.end).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})} · ${now >= season.start && now <= season.end ? '🟢 Live now' : isPast ? '✅ Ended' : '📅 Upcoming'}`;
+
+            // One photo per season — the same folder photo shown as the season's thumbnail (in
+            // both Study Zone and Test Zone lists) is also used as this hero's background. No
+            // separate per-folder cover system here; General has no season, so no background photo.
+            const testHero = document.getElementById('test-hero-bg');
+            const testScrim = document.getElementById('test-hero-scrim');
+            if (testHero) {
+                if (season?.folderImage) {
+                    testHero.style.background = `url('${season.folderImage}')`;
+                    testHero.style.backgroundSize = 'cover';
+                    testHero.style.backgroundPosition = 'center';
+                    testScrim?.classList.remove('hidden');
+                } else {
+                    testHero.style.background = 'linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#4c1d95 100%)';
+                    testScrim?.classList.add('hidden');
+                }
+            }
 
             const allSeasonIds = new Set((globalData.seasons || []).map(s => s.id));
             const bucketQuizzes = (isGeneral
