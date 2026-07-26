@@ -3144,6 +3144,11 @@
                 if (viewingProfileUid && document.getElementById('pv-tab-achievements-content') && !document.getElementById('pv-tab-achievements-content').classList.contains('hidden-view')) {
                     renderProfilePostsFeed(viewingProfileUid);
                 }
+                // This was missing: the Home "following" feed is built entirely from certificate
+                // data, but nothing here ever told it to refresh when that data changed — so a
+                // newly-issued certificate from someone you follow could sit invisible on Home
+                // until some unrelated event happened to trigger a dashboard refresh.
+                renderFollowingFeed();
             }));
 
             unsubscribes.push(onSnapshot(getPublicCol('study_content'), snapshot => {
@@ -5315,7 +5320,7 @@
             <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden ${revoked ? 'opacity-60' : ''}">
                 <div class="h-2 bg-gradient-to-r ${stripGradient}"></div>
                 <div class="relative">
-                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none">
+                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none" style="touch-action: pan-x;">
                         ${certPage}
                         ${awardPage}
                     </div>
@@ -5419,11 +5424,14 @@
                     </button>
                 </div>
 
-                <!-- Full-bleed image, edge-to-edge, no border/rounding — matches a real feed post -->
+                <!-- Full-bleed image, edge-to-edge, no border/rounding — matches a real feed post.
+                     Tap targets inside the swipe strip are plain divs, not buttons — a button
+                     element here would fight with the browser's native touch-drag scrolling,
+                     which is exactly why swiping felt "stuck"/unresponsive before. -->
                 <div class="relative">
-                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none">
-                        <button onclick="window.viewCertFile('${certId}')" class="block w-full shrink-0 snap-center">${certImgHTML}</button>
-                        ${hasAward ? `<button onclick="window.viewAwardFile('${certId}')" class="block w-full shrink-0 snap-center">${awardImgHTML}</button>` : ''}
+                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none" style="touch-action: pan-x;">
+                        <div onclick="window.viewCertFile('${certId}')" class="block w-full shrink-0 snap-center cursor-pointer">${certImgHTML}</div>
+                        ${hasAward ? `<div onclick="window.viewAwardFile('${certId}')" class="block w-full shrink-0 snap-center cursor-pointer">${awardImgHTML}</div>` : ''}
                     </div>
                     ${hasAward ? `
                     <div class="absolute top-3 right-3 bg-slate-900/70 text-white text-[9px] font-black px-2 py-1 rounded-full pointer-events-none">Swipe for Award →</div>
