@@ -5320,7 +5320,7 @@
             <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden ${revoked ? 'opacity-60' : ''}">
                 <div class="h-2 bg-gradient-to-r ${stripGradient}"></div>
                 <div class="relative">
-                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none" style="touch-action: pan-x;">
+                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none" style="touch-action: pan-x pan-y;">
                         ${certPage}
                         ${awardPage}
                     </div>
@@ -5429,7 +5429,7 @@
                      element here would fight with the browser's native touch-drag scrolling,
                      which is exactly why swiping felt "stuck"/unresponsive before. -->
                 <div class="relative">
-                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none" style="touch-action: pan-x;">
+                    <div class="flex overflow-x-auto snap-x snap-mandatory scrollbar-none" style="touch-action: pan-x pan-y;">
                         <div onclick="window.viewCertFile('${certId}')" class="block w-full shrink-0 snap-center cursor-pointer">${certImgHTML}</div>
                         ${hasAward ? `<div onclick="window.viewAwardFile('${certId}')" class="block w-full shrink-0 snap-center cursor-pointer">${awardImgHTML}</div>` : ''}
                     </div>
