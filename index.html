@@ -633,6 +633,31 @@
                 </div>
             </div>
 
+            <!-- Main Content Area (Challenge Arena) — sits right above certificates/stats -->
+            <div class="space-y-6">
+                <div class="space-y-6">
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
+                                <span class="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></span> <span id="home-active-season-label">Active Season</span>
+                            </h3>
+                            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full" id="quiz-count-label">0 Available</span>
+                        </div>
+                        <div class="flex bg-slate-100 rounded-xl p-1">
+                            <button onclick="window.setHomeTab('test')" id="home-tab-test" class="flex-1 text-xs font-bold py-2 rounded-lg bg-indigo-600 text-white shadow-sm transition-all">📝 Test</button>
+                            <button onclick="window.setHomeTab('material')" id="home-tab-material" class="flex-1 text-xs font-bold py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all">📚 Study Material</button>
+                        </div>
+                    </div>
+
+                    <div id="quiz-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        <!-- Quizzes injected via JS -->
+                    </div>
+                    <div id="home-material-grid" class="hidden space-y-4">
+                        <!-- Active season's study material injected via JS -->
+                    </div>
+                </div>
+            </div>
+
             <!-- Quick Stats Strip -->
             <div id="stats-strip" class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="stat-chip">
@@ -664,31 +689,6 @@
                 </div>
                 <div id="following-feed-scroller" class="bg-white rounded-3xl border border-slate-200 shadow-sm px-4 divide-y divide-slate-100">
                     <!-- Injected via JS -->
-                </div>
-            </div>
-
-            <!-- Main Content Area (Challenge Arena) — sits at the bottom of the dashboard -->
-            <div class="space-y-6">
-                <div class="space-y-6">
-                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-                        <div class="flex justify-between items-center">
-                            <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                                <span class="w-3 h-3 bg-indigo-500 rounded-full animate-pulse"></span> <span id="home-active-season-label">Active Season</span>
-                            </h3>
-                            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full" id="quiz-count-label">0 Available</span>
-                        </div>
-                        <div class="flex bg-slate-100 rounded-xl p-1">
-                            <button onclick="window.setHomeTab('test')" id="home-tab-test" class="flex-1 text-xs font-bold py-2 rounded-lg bg-indigo-600 text-white shadow-sm transition-all">📝 Test</button>
-                            <button onclick="window.setHomeTab('material')" id="home-tab-material" class="flex-1 text-xs font-bold py-2 rounded-lg text-slate-500 hover:text-slate-800 transition-all">📚 Study Material</button>
-                        </div>
-                    </div>
-
-                    <div id="quiz-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <!-- Quizzes injected via JS -->
-                    </div>
-                    <div id="home-material-grid" class="hidden space-y-4">
-                        <!-- Active season's study material injected via JS -->
-                    </div>
                 </div>
             </div>
         </div>
@@ -1060,62 +1060,71 @@
 
         <!-- List (shown when no season is selected) -->
         <div id="seasons-list-panel">
-            <!-- Global leaderboards — moved here from Home. Both All-Time and Season shown
-                 together, side by side (left/right), stacking only on very narrow screens where
-                 two side-by-side leaderboards would be too cramped to read. -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-8">
-                <div class="glass rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden">
-                    <div class="p-5 bg-slate-900 text-white">
-                        <h3 class="text-base font-black flex items-center gap-2">🏆 All-Time Top 10</h3>
-                    </div>
-                    <div class="p-3 space-y-2 bg-slate-50/50 max-h-[420px] overflow-y-auto" id="leaderboard-list-alltime">
-                        <div class="space-y-2 animate-pulse">
-                            <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-5 bg-slate-200 rounded"></div>
-                                    <div class="w-10 h-10 rounded-full bg-slate-200"></div>
-                                    <div class="h-3 w-20 bg-slate-200 rounded"></div>
-                                </div>
-                                <div class="h-3 w-10 bg-slate-200 rounded"></div>
+            <!-- Global leaderboards — moved here from Home. Swipe between them (left: Active
+                 Season Top 5, right: All-Time Top 10) instead of a side-by-side layout or an
+                 inner scrollbox, using the same swipe mechanism as certificate/award cards. -->
+            <div class="glass rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden mb-8">
+                <div class="overflow-hidden swipe-strip" style="touch-action: pan-y;">
+                    <div class="flex swipe-track">
+                        <div class="shrink-0 w-full">
+                            <div class="p-5 bg-slate-900 text-white">
+                                <h3 class="text-base font-black flex items-center gap-2">🔥 Active Season Top 5</h3>
                             </div>
-                            <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-5 bg-slate-200 rounded"></div>
-                                    <div class="w-10 h-10 rounded-full bg-slate-200"></div>
-                                    <div class="h-3 w-24 bg-slate-200 rounded"></div>
+                            <div class="p-3 space-y-2 bg-slate-50/50 min-h-[280px]" id="leaderboard-list-season">
+                                <div class="space-y-2 animate-pulse">
+                                    <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-5 bg-slate-200 rounded"></div>
+                                            <div class="w-10 h-10 rounded-full bg-slate-200"></div>
+                                            <div class="h-3 w-16 bg-slate-200 rounded"></div>
+                                        </div>
+                                        <div class="h-3 w-10 bg-slate-200 rounded"></div>
+                                    </div>
                                 </div>
-                                <div class="h-3 w-10 bg-slate-200 rounded"></div>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="p-4 bg-white border-t border-slate-200 flex justify-between items-center">
-                        <div>
-                            <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Your Rank</span>
-                            <span class="font-black text-indigo-600 text-xl" id="my-rank-display">#--</span>
+                        <div class="shrink-0 w-full">
+                            <div class="p-5 bg-slate-900 text-white">
+                                <h3 class="text-base font-black flex items-center gap-2">🏆 All-Time Top 10</h3>
+                            </div>
+                            <div class="p-3 space-y-2 bg-slate-50/50 min-h-[280px]" id="leaderboard-list-alltime">
+                                <div class="space-y-2 animate-pulse">
+                                    <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-5 bg-slate-200 rounded"></div>
+                                            <div class="w-10 h-10 rounded-full bg-slate-200"></div>
+                                            <div class="h-3 w-20 bg-slate-200 rounded"></div>
+                                        </div>
+                                        <div class="h-3 w-10 bg-slate-200 rounded"></div>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-5 bg-slate-200 rounded"></div>
+                                            <div class="w-10 h-10 rounded-full bg-slate-200"></div>
+                                            <div class="h-3 w-24 bg-slate-200 rounded"></div>
+                                        </div>
+                                        <div class="h-3 w-10 bg-slate-200 rounded"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <button onclick="window.triggerShareCard('leaderboard', document.getElementById('my-rank-display').innerText.replace('#',''))" class="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 cursor-pointer hover:bg-indigo-600 hover:text-white transition-colors" title="Share Leaderboard Rank">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-                        </button>
                     </div>
                 </div>
 
-                <div class="glass rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden">
-                    <div class="p-5 bg-slate-900 text-white">
-                        <h3 class="text-base font-black flex items-center gap-2">🔥 Active Season Top 5</h3>
+                <div class="swipe-dots flex justify-center gap-1.5 py-3 bg-slate-50/50">
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-500 transition-opacity"></span>
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-500 transition-opacity" style="opacity:0.5"></span>
+                </div>
+                <p class="text-center text-[10px] font-bold text-slate-400 -mt-2 pb-3">← Swipe for All-Time Top 10 · Season Top 5 →</p>
+
+                <div class="p-4 bg-white border-t border-slate-200 flex justify-between items-center">
+                    <div>
+                        <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Your Rank</span>
+                        <span class="font-black text-indigo-600 text-xl" id="my-rank-display">#--</span>
                     </div>
-                    <div class="p-3 space-y-2 bg-slate-50/50 max-h-[420px] overflow-y-auto" id="leaderboard-list-season">
-                        <div class="space-y-2 animate-pulse">
-                            <div class="flex items-center justify-between p-3 rounded-2xl border border-slate-100 bg-white">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-5 bg-slate-200 rounded"></div>
-                                    <div class="w-10 h-10 rounded-full bg-slate-200"></div>
-                                    <div class="h-3 w-16 bg-slate-200 rounded"></div>
-                                </div>
-                                <div class="h-3 w-10 bg-slate-200 rounded"></div>
-                            </div>
-                        </div>
-                    </div>
+                    <button onclick="window.triggerShareCard('leaderboard', document.getElementById('my-rank-display').innerText.replace('#',''))" class="w-9 h-9 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 cursor-pointer hover:bg-indigo-600 hover:text-white transition-colors" title="Share Leaderboard Rank">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                    </button>
                 </div>
             </div>
 
@@ -3577,6 +3586,11 @@
         // in full and the page itself is the only thing that scrolls.
         const renderGlobalLeaderboard = () => {
             if (!currentUser) return;
+
+            // Wire up the swipe-between-leaderboards gesture once — safe to call on every
+            // refresh since initSwipeStrip guards against double-binding the same element.
+            const lbStrip = document.querySelector('#seasons-list-panel .swipe-strip');
+            if (lbStrip) bindSwipeStripsIn(lbStrip.closest('.glass'));
 
             // All-time Top 10
             const allTimeBoard = getLeaderboard(false);
