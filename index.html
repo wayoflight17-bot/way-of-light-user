@@ -1061,14 +1061,14 @@
         <!-- List (shown when no season is selected) -->
         <div id="seasons-list-panel">
             <!-- Global leaderboards — moved here from Home. Swipe between them (left: Active
-                 Season Top 5, right: All-Time Top 10) instead of a side-by-side layout or an
+                 Season Top 10, right: All-Time Top 10) instead of a side-by-side layout or an
                  inner scrollbox, using the same swipe mechanism as certificate/award cards. -->
             <div class="glass rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden mb-8">
                 <div class="overflow-hidden swipe-strip" style="touch-action: pan-y;">
                     <div class="flex swipe-track">
                         <div class="shrink-0 w-full">
                             <div class="p-5 bg-slate-900 text-white">
-                                <h3 class="text-base font-black flex items-center gap-2">🔥 Active Season Top 5</h3>
+                                <h3 class="text-base font-black flex items-center gap-2">🔥 Active Season Top 10</h3>
                             </div>
                             <div class="p-3 space-y-2 bg-slate-50/50 min-h-[280px]" id="leaderboard-list-season">
                                 <div class="space-y-2 animate-pulse">
@@ -1115,7 +1115,7 @@
                     <span class="w-1.5 h-1.5 rounded-full bg-slate-500 transition-opacity"></span>
                     <span class="w-1.5 h-1.5 rounded-full bg-slate-500 transition-opacity" style="opacity:0.5"></span>
                 </div>
-                <p class="text-center text-[10px] font-bold text-slate-400 -mt-2 pb-3">← Swipe for All-Time Top 10 · Season Top 5 →</p>
+                <p class="text-center text-[10px] font-bold text-slate-400 -mt-2 pb-3">← Swipe for All-Time Top 10 · Season Top 10 →</p>
 
                 <div class="p-4 bg-white border-t border-slate-200 flex justify-between items-center">
                     <div>
@@ -3580,7 +3580,7 @@
         };
 
         // Extracted from renderDashboard so the leaderboards can live in the Seasons view instead
-        // of the Home dashboard. Shows BOTH All-Time Top 10 and Active-Season Top 5 stacked
+        // of the Home dashboard. Shows BOTH All-Time Top 10 and Active-Season Top 10 stacked
         // directly on the page (no toggle, no inner scroll box) — a scrollable box nested inside
         // an already-scrolling page felt like a "double slide" to use, so both lists just render
         // in full and the page itself is the only thing that scrolls.
@@ -3604,7 +3604,7 @@
                     : allTimeBoard.slice(0, 10).map((u, i) => buildLeaderboardRowHTML(u, i)).join('');
             }
 
-            // Active season Top 5
+            // Active season Top 10
             const activeSeason = getActiveSeason();
             const seasonList = document.getElementById('leaderboard-list-season');
             if (seasonList) {
@@ -3614,7 +3614,7 @@
                     const seasonBoard = getLeaderboard(true);
                     seasonList.innerHTML = seasonBoard.length === 0
                         ? `<div class="p-8 text-center text-slate-400 font-bold text-sm">Be the first to score this season!</div>`
-                        : seasonBoard.slice(0, 5).map((u, i) => buildLeaderboardRowHTML(u, i)).join('');
+                        : seasonBoard.slice(0, 10).map((u, i) => buildLeaderboardRowHTML(u, i)).join('');
                 }
             }
         };
@@ -6601,7 +6601,7 @@
             const pastSeasonNote = isPast ? `
                 <div class="mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-2xl text-xs font-bold text-amber-800 flex items-start gap-2">
                     <span class="text-base flex-shrink-0">ℹ️</span>
-                    <span>This season has ended — you can still attempt the test below. Your XP will still be added to your profile and the all-time Top 10, it just won't count toward this season's Top 5 ranking.</span>
+                    <span>This season has ended — you can still attempt the test below. Your XP will still be added to your profile and the all-time Top 10, it just won't count toward this season's Top 10 ranking.</span>
                 </div>` : '';
 
             grid.innerHTML = `
