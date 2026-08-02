@@ -1170,6 +1170,7 @@
         </div>
 
         <!-- Avatar + Stats Row (Instagram layout) -->
+        <div id="pv-content-wrap">
         <div class="flex items-start gap-6 mb-5 px-1">
             <!-- Avatar with ring -->
             <div class="relative shrink-0">
@@ -1202,6 +1203,12 @@
                 <div class="flex gap-2" id="pv-action-row">
                     <button id="pv-follow-btn" onclick="window.toggleFollowProfile()" class="flex-1 py-2 rounded-xl text-sm font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-all active:scale-95 shadow-sm">Follow</button>
                     <button id="pv-edit-btn" onclick="window.openProfile()" class="flex-1 py-2 rounded-xl text-sm font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all border border-slate-200 active:scale-95 hidden">✏️ Edit Profile</button>
+                    <button id="pv-block-menu-btn" onclick="window.togglePvBlockMenu()" class="w-10 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all border border-slate-200 active:scale-95 relative hidden">
+                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
+                        <div id="pv-block-menu" class="hidden-view absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 w-44 z-20 text-left">
+                            <button onclick="event.stopPropagation(); window.blockUser(viewingProfileUid, document.getElementById('pv-name')?.innerText); window.togglePvBlockMenu();" class="w-full px-4 py-2.5 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors">🚫 Block</button>
+                        </div>
+                    </button>
                 </div>
             </div>
         </div>
@@ -1276,6 +1283,20 @@
                 <p class="font-bold text-slate-400">No achievements yet</p>
                 <p class="text-xs text-slate-300 font-semibold mt-1">Certificates and award letters will show up here.</p>
             </div>
+        </div>
+        </div>
+        <!-- pv-content-wrap end -->
+
+        <!-- Locked state — shown instead of the real content when this account is private and
+             the viewer isn't an approved follower. This is the only enforcement point needed on
+             the client, since the actual Firestore rules already restrict data access similarly —
+             this is just the friendly, honest version of that in the UI. -->
+        <div id="pv-locked-state" class="hidden-view text-center py-16 px-6">
+            <div class="w-20 h-20 mx-auto rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                <svg class="w-9 h-9 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <p class="font-black text-slate-800 text-lg">This Account is Private</p>
+            <p class="text-sm text-slate-400 font-medium mt-1">Follow this account to see their tests, certificates and posts.</p>
         </div>
 
     </div>
@@ -1466,15 +1487,26 @@
                 <!-- Who Can See Your Content -->
                 <div class="p-2">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-4 pt-3 pb-1">Privacy</p>
-                    <button onclick="window.showSettingsComingSoon('Account Privacy')" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-50 transition-colors text-left">
+                    <div class="flex items-center gap-3 px-4 py-3.5">
                         <svg class="w-5 h-5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-                        <span class="font-bold text-slate-800 text-sm flex-1">Account Privacy</span>
-                        <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-full">Suggested</span>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-bold text-slate-800 text-sm">Private Account</div>
+                            <div class="text-[11px] text-slate-400 font-semibold" id="privacy-toggle-desc">Only approved followers can see your profile, certificates and posts</div>
+                        </div>
+                        <button id="privacy-toggle-btn" onclick="window.togglePrivateAccount()" class="shrink-0 relative w-12 h-7 rounded-full transition-colors bg-slate-200" title="Toggle private account">
+                            <span id="privacy-toggle-knob" class="absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform"></span>
+                        </button>
+                    </div>
+                    <button onclick="window.closeSettingsPanel(); window.openFollowRequestsModal();" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-50 transition-colors text-left">
+                        <svg class="w-5 h-5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                        <span class="font-bold text-slate-800 text-sm flex-1">Follow Requests</span>
+                        <span id="settings-requests-badge" class="hidden text-[10px] font-black text-white bg-rose-500 px-2 py-0.5 rounded-full">0</span>
+                        <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                     </button>
-                    <button onclick="window.showSettingsComingSoon('Blocked Accounts')" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-50 transition-colors text-left">
+                    <button onclick="window.closeSettingsPanel(); window.openBlockedAccountsModal();" class="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl hover:bg-slate-50 transition-colors text-left">
                         <svg class="w-5 h-5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
                         <span class="font-bold text-slate-800 text-sm flex-1">Blocked Accounts</span>
-                        <span class="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-1 rounded-full">Suggested</span>
+                        <svg class="w-4 h-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
                     </button>
                 </div>
 
@@ -1495,6 +1527,34 @@
                         <span class="font-black text-rose-600 text-sm">Log Out</span>
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Follow Requests inbox — pending requests from people wanting to follow me (private account) -->
+        <div id="modal-follow-requests" class="hidden-view w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 my-8 max-h-[80vh] flex flex-col">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <h3 class="text-lg font-black text-slate-800">Follow Requests</h3>
+                <button onclick="window.closeFollowRequestsModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors font-bold">✕</button>
+            </div>
+            <div class="overflow-y-auto flex-1 divide-y divide-slate-100" id="follow-requests-list"></div>
+            <div id="follow-requests-empty" class="hidden-view text-center py-16 px-6">
+                <div class="text-5xl mb-3">📭</div>
+                <p class="font-bold text-slate-500">No pending requests</p>
+                <p class="text-xs text-slate-400 mt-1">When someone asks to follow you, they'll show up here.</p>
+            </div>
+        </div>
+
+        <!-- Blocked Accounts manager -->
+        <div id="modal-blocked-accounts" class="hidden-view w-full max-w-md bg-white rounded-[2.5rem] overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300 my-8 max-h-[80vh] flex flex-col">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <h3 class="text-lg font-black text-slate-800">Blocked Accounts</h3>
+                <button onclick="window.closeBlockedAccountsModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-200 text-slate-500 hover:bg-rose-100 hover:text-rose-600 transition-colors font-bold">✕</button>
+            </div>
+            <div class="overflow-y-auto flex-1 divide-y divide-slate-100" id="blocked-accounts-list"></div>
+            <div id="blocked-accounts-empty" class="hidden-view text-center py-16 px-6">
+                <div class="text-5xl mb-3">🚫</div>
+                <p class="font-bold text-slate-500">No blocked accounts</p>
+                <p class="text-xs text-slate-400 mt-1">Accounts you block will show up here so you can unblock them anytime.</p>
             </div>
         </div>
 
@@ -3864,8 +3924,39 @@
                 notifBtn.innerText = subscribed ? 'Enabled' : 'Enable';
                 notifBtn.className = `shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-black transition-all active:scale-95 ${subscribed ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100' : 'bg-indigo-600 text-white hover:bg-indigo-700'}`;
             }
+            window.updatePrivacyToggleUI();
+            const badge = document.getElementById('settings-requests-badge');
+            if (badge) {
+                if (myIncomingRequests.length > 0) { badge.innerText = myIncomingRequests.length; badge.classList.remove('hidden'); }
+                else badge.classList.add('hidden');
+            }
             document.getElementById('modal-overlay').classList.remove('hidden-view');
             document.getElementById('modal-settings').classList.remove('hidden-view');
+        };
+
+        window.updatePrivacyToggleUI = () => {
+            const btn = document.getElementById('privacy-toggle-btn');
+            const knob = document.getElementById('privacy-toggle-knob');
+            const desc = document.getElementById('privacy-toggle-desc');
+            if (!btn || !knob) return;
+            const isPrivate = userData?.isPrivate === true;
+            btn.classList.toggle('bg-indigo-600', isPrivate);
+            btn.classList.toggle('bg-slate-200', !isPrivate);
+            knob.style.transform = isPrivate ? 'translateX(20px)' : 'translateX(0)';
+            if (desc) desc.innerText = isPrivate
+                ? 'Only approved followers can see your profile, certificates and posts'
+                : 'Anyone can see your profile, certificates and posts, and follow you instantly';
+        };
+
+        window.togglePrivateAccount = async () => {
+            if (!currentUser) return;
+            const newValue = !(userData?.isPrivate === true);
+            try {
+                await updateDoc(getPublicDoc('exam_users', currentUser.uid), { isPrivate: newValue });
+                showToast(newValue ? "Your account is now private." : "Your account is now public.", newValue ? "🔒" : "🔓");
+            } catch (e) {
+                showToast("Couldn't update this setting. Please try again.", "❌");
+            }
         };
 
         window.closeSettingsPanel = () => {
@@ -4937,10 +5028,18 @@
 
         let myFollowing = new Set(); // UIDs I follow
         let myFollowers = new Set(); // UIDs that follow me
+        let myBlocked = new Set(); // UIDs I have blocked
+        let myOutgoingRequests = new Set(); // UIDs I've sent a pending follow request to (their account is private)
+        let myIncomingRequests = []; // pending requests from others to follow ME (only relevant if I'm private) — [{uid, name, avatar, requestedAt}]
         let socialUnsubscribes = [];
         let currentPeopleTab = 'all';
         let viewingProfileUid = null;
         let profileViewSource = 'people'; // 'people' or 'leaderboard'
+
+        const getBlockedCol = (uid) => collection(db, 'artifacts', appId, 'public', 'data', 'follows', uid, 'blocked');
+        const getBlockedDoc = (uid, targetId) => doc(db, 'artifacts', appId, 'public', 'data', 'follows', uid, 'blocked', targetId);
+        const getFollowRequestsCol = (targetUid) => collection(db, 'artifacts', appId, 'public', 'data', 'follow_requests', targetUid, 'incoming');
+        const getFollowRequestDoc = (targetUid, requesterUid) => doc(db, 'artifacts', appId, 'public', 'data', 'follow_requests', targetUid, 'incoming', requesterUid);
 
         const setupSocialListeners = () => {
             socialUnsubscribes.forEach(u => u());
@@ -4956,6 +5055,15 @@
                 if (document.getElementById('view-dashboard') && !document.getElementById('view-dashboard').classList.contains('hidden-view')) {
                     renderFollowingFeed();
                 }
+                // If a request I sent just got approved, I'm now following them — clean up the
+                // now-stale outgoing_requests mirror entry (this is done from my own side, since
+                // the person approving the request only has permission to write their own subtree,
+                // not mine).
+                myFollowing.forEach(uid => {
+                    if (myOutgoingRequests.has(uid)) {
+                        deleteDoc(getFollowDoc(currentUser.uid, 'outgoing_requests', uid)).catch(() => {});
+                    }
+                });
                 refreshOpenSocialModal();
             }));
 
@@ -4965,6 +5073,36 @@
                 updateFollowerCounts();
                 refreshOpenSocialModal();
             }));
+
+            // Accounts I've blocked
+            socialUnsubscribes.push(onSnapshot(getBlockedCol(currentUser.uid), snap => {
+                myBlocked = new Set(snap.docs.map(d => d.id));
+                if (document.getElementById('modal-blocked-accounts') && !document.getElementById('modal-blocked-accounts').classList.contains('hidden-view')) {
+                    window.renderBlockedAccountsList();
+                }
+            }, err => console.warn('Blocked list sync error:', err.code)));
+
+            // Pending requests to follow ME (only meaningful if my account is private, but harmless to track either way)
+            socialUnsubscribes.push(onSnapshot(getFollowRequestsCol(currentUser.uid), snap => {
+                myIncomingRequests = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+                const badge = document.getElementById('settings-requests-badge');
+                if (badge) {
+                    if (myIncomingRequests.length > 0) { badge.innerText = myIncomingRequests.length; badge.classList.remove('hidden'); }
+                    else badge.classList.add('hidden');
+                }
+                if (document.getElementById('modal-follow-requests') && !document.getElementById('modal-follow-requests').classList.contains('hidden-view')) {
+                    window.renderFollowRequestsList();
+                }
+            }, err => console.warn('Follow requests sync error:', err.code)));
+
+            // My own record of who I've sent pending follow requests to (private accounts) — kept
+            // as a small mirror under my own subtree specifically so checking "have I already
+            // requested this person" never needs a collection-group query across every other
+            // user's follow_requests subcollection.
+            socialUnsubscribes.push(onSnapshot(getFollowCol(currentUser.uid, 'outgoing_requests'), snap => {
+                myOutgoingRequests = new Set(snap.docs.map(d => d.id));
+                refreshOpenSocialModal();
+            }, err => console.warn('Outgoing requests sync error:', err.code)));
         };
 
         // Re-renders the open followers/following modal's button labels (Follow / Following / Follow Back)
@@ -4990,25 +5128,59 @@
 
         window.toggleFollow = async (targetUid) => {
             if (!currentUser || targetUid === currentUser.uid) return;
-            const btn = document.querySelector(`[data-follow-uid="${targetUid}"]`);
             const isFollowing = myFollowing.has(targetUid);
+
+            // Cancelling an already-sent request (target is private, request still pending)
+            if (!isFollowing && myOutgoingRequests.has(targetUid)) {
+                try {
+                    await Promise.all([
+                        deleteDoc(getFollowRequestDoc(targetUid, currentUser.uid)),
+                        deleteDoc(getFollowDoc(currentUser.uid, 'outgoing_requests', targetUid))
+                    ]);
+                    myOutgoingRequests.delete(targetUid);
+                    showToast("Follow request cancelled.", "↩️");
+                    if (viewingProfileUid === targetUid) updateProfileViewFollowBtn(targetUid);
+                } catch (e) {
+                    showToast("Couldn't cancel the request. Please try again.", "❌");
+                }
+                return;
+            }
 
             try {
                 if (isFollowing) {
                     // Unfollow
                     await Promise.all([
-                        setDoc(getFollowDoc(currentUser.uid, 'following', targetUid), { deleted: true }),
-                        setDoc(getFollowDoc(targetUid, 'followers', currentUser.uid), { deleted: true })
-                    ]);
-                    // Actually delete
-                    const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                    await Promise.all([
                         deleteDoc(getFollowDoc(currentUser.uid, 'following', targetUid)),
                         deleteDoc(getFollowDoc(targetUid, 'followers', currentUser.uid))
                     ]);
                     showToast("Unfollowed", "👋");
+                    return;
+                }
+
+                // Blocking is checked on both sides before allowing a new follow/request — the
+                // Firestore rules also enforce this server-side, this is just a faster/friendlier
+                // client-side check so the person gets an immediate, clear message.
+                const targetUserDoc = globalData.users[targetUid] || {};
+                if (myBlocked.has(targetUid)) {
+                    return showToast("You've blocked this account. Unblock them first to follow.", "🚫");
+                }
+
+                if (targetUserDoc.isPrivate) {
+                    // Private account — send a follow request instead of following instantly.
+                    // The mirror under my own follows/{me}/outgoing_requests subtree exists purely
+                    // so my own UI can check "did I already request this?" without needing a
+                    // collection-group query across every other user's follow_requests.
+                    await Promise.all([
+                        setDoc(getFollowRequestDoc(targetUid, currentUser.uid), {
+                            name: userData?.name || 'Student',
+                            avatar: userData?.avatar || '',
+                            requestedAt: Date.now()
+                        }),
+                        setDoc(getFollowDoc(currentUser.uid, 'outgoing_requests', targetUid), { requestedAt: Date.now() })
+                    ]);
+                    myOutgoingRequests.add(targetUid);
+                    showToast("Follow request sent.", "📨");
                 } else {
-                    // Follow
                     const now = Date.now();
                     await Promise.all([
                         setDoc(getFollowDoc(currentUser.uid, 'following', targetUid), { followedAt: now }),
@@ -5018,14 +5190,21 @@
                 }
             } catch(e) {
                 console.error("Follow error:", e);
-                showToast("Action failed. Check connection.", "❌");
+                if (e.code === 'permission-denied') {
+                    showToast("This action isn't allowed — you may have been blocked.", "🚫");
+                } else {
+                    showToast("Action failed. Check connection.", "❌");
+                }
             }
+            if (viewingProfileUid === targetUid) updateProfileViewFollowBtn(targetUid);
         };
 
         // Returns the Instagram-style label for a follow button toward `uid`.
         // "Follow Back" is shown when they already follow me but I don't follow them yet.
+        // "Requested" is shown when the target is private and a follow request is pending.
         const getFollowButtonLabel = (uid) => {
             if (myFollowing.has(uid)) return 'Following';
+            if (myOutgoingRequests.has(uid)) return 'Requested';
             return myFollowers.has(uid) ? 'Follow Back' : '+ Follow';
         };
 
@@ -5033,6 +5212,131 @@
             if (!viewingProfileUid) return;
             await window.toggleFollow(viewingProfileUid);
             updateProfileViewFollowBtn(viewingProfileUid);
+        };
+
+        window.approveFollowRequest = async (requesterUid) => {
+            if (!currentUser) return;
+            try {
+                const now = Date.now();
+                await Promise.all([
+                    setDoc(getFollowDoc(currentUser.uid, 'followers', requesterUid), { followedAt: now }),
+                    setDoc(getFollowDoc(requesterUid, 'following', currentUser.uid), { followedAt: now }),
+                    deleteDoc(getFollowRequestDoc(currentUser.uid, requesterUid))
+                ]);
+                showToast("Follow request approved.", "✅");
+            } catch (e) {
+                console.error(e);
+                showToast("Couldn't approve this request. Please try again.", "❌");
+            }
+        };
+
+        window.declineFollowRequest = async (requesterUid) => {
+            if (!currentUser) return;
+            try {
+                await deleteDoc(getFollowRequestDoc(currentUser.uid, requesterUid));
+                showToast("Request declined.", "🗑️");
+            } catch (e) {
+                showToast("Couldn't decline this request. Please try again.", "❌");
+            }
+        };
+
+        window.openFollowRequestsModal = () => {
+            window.renderFollowRequestsList();
+            document.getElementById('modal-overlay').classList.remove('hidden-view');
+            document.getElementById('modal-follow-requests').classList.remove('hidden-view');
+        };
+
+        window.closeFollowRequestsModal = () => {
+            document.getElementById('modal-overlay').classList.add('hidden-view');
+            document.getElementById('modal-follow-requests').classList.add('hidden-view');
+        };
+
+        window.renderFollowRequestsList = () => {
+            const listEl = document.getElementById('follow-requests-list');
+            const emptyEl = document.getElementById('follow-requests-empty');
+            if (!listEl) return;
+            if (myIncomingRequests.length === 0) {
+                listEl.innerHTML = '';
+                emptyEl?.classList.remove('hidden-view');
+                return;
+            }
+            emptyEl?.classList.add('hidden-view');
+            const sorted = [...myIncomingRequests].sort((a, b) => (b.requestedAt || 0) - (a.requestedAt || 0));
+            listEl.innerHTML = sorted.map(r => `
+                <div class="flex items-center gap-3 px-4 py-3">
+                    <img src="${r.avatar || AVATARS[0]}" class="w-11 h-11 rounded-full border border-slate-200 object-cover shrink-0 cursor-pointer" onclick="window.closeFollowRequestsModal(); window.openProfileView('${r.uid}')">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-slate-800 text-sm truncate">${r.name || 'Student'}</div>
+                        <div class="text-[10px] text-slate-400 font-semibold">wants to follow you</div>
+                    </div>
+                    <button onclick="window.approveFollowRequest('${r.uid}')" class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-colors">Approve</button>
+                    <button onclick="window.declineFollowRequest('${r.uid}')" class="shrink-0 px-3 py-1.5 rounded-lg text-xs font-black bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">Decline</button>
+                </div>`).join('');
+        };
+
+        // ========== BLOCKING ==========
+        window.blockUser = async (targetUid, targetName) => {
+            if (!currentUser || targetUid === currentUser.uid) return;
+            if (!confirm(`Block ${targetName || 'this account'}? They won't be able to follow you or comment on your posts, and you'll stop following each other.`)) return;
+            try {
+                await Promise.all([
+                    setDoc(getBlockedDoc(currentUser.uid, targetUid), { blockedAt: Date.now(), name: targetName || '' }),
+                    // Blocking severs any existing follow relationship in both directions.
+                    deleteDoc(getFollowDoc(currentUser.uid, 'following', targetUid)).catch(() => {}),
+                    deleteDoc(getFollowDoc(targetUid, 'followers', currentUser.uid)).catch(() => {}),
+                    deleteDoc(getFollowDoc(currentUser.uid, 'followers', targetUid)).catch(() => {}),
+                    deleteDoc(getFollowDoc(targetUid, 'following', currentUser.uid)).catch(() => {})
+                ]);
+                showToast(`${targetName || 'Account'} blocked.`, "🚫");
+                if (viewingProfileUid === targetUid) window.goBackFromProfile?.();
+            } catch (e) {
+                console.error(e);
+                showToast("Couldn't block this account. Please try again.", "❌");
+            }
+        };
+
+        window.unblockUser = async (targetUid) => {
+            if (!currentUser) return;
+            try {
+                await deleteDoc(getBlockedDoc(currentUser.uid, targetUid));
+                showToast("Account unblocked.", "✅");
+            } catch (e) {
+                showToast("Couldn't unblock this account. Please try again.", "❌");
+            }
+        };
+
+        window.openBlockedAccountsModal = () => {
+            window.renderBlockedAccountsList();
+            document.getElementById('modal-overlay').classList.remove('hidden-view');
+            document.getElementById('modal-blocked-accounts').classList.remove('hidden-view');
+        };
+
+        window.closeBlockedAccountsModal = () => {
+            document.getElementById('modal-overlay').classList.add('hidden-view');
+            document.getElementById('modal-blocked-accounts').classList.add('hidden-view');
+        };
+
+        window.renderBlockedAccountsList = () => {
+            const listEl = document.getElementById('blocked-accounts-list');
+            const emptyEl = document.getElementById('blocked-accounts-empty');
+            if (!listEl) return;
+            if (myBlocked.size === 0) {
+                listEl.innerHTML = '';
+                emptyEl?.classList.remove('hidden-view');
+                return;
+            }
+            emptyEl?.classList.add('hidden-view');
+            listEl.innerHTML = [...myBlocked].map(uid => {
+                const u = globalData.users[uid] || {};
+                return `
+                <div class="flex items-center gap-3 px-4 py-3">
+                    <img src="${u.avatar || AVATARS[0]}" class="w-11 h-11 rounded-full border border-slate-200 object-cover shrink-0 grayscale">
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-slate-800 text-sm truncate">${u.name || 'Unknown Student'}</div>
+                    </div>
+                    <button onclick="window.unblockUser('${uid}')" class="shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors">Unblock</button>
+                </div>`;
+            }).join('');
         };
 
         window.setPvTab = (tab) => {
@@ -5058,20 +5362,33 @@
             const followBtn = document.getElementById('pv-follow-btn');
             const editBtn = document.getElementById('pv-edit-btn');
             const optionsBtn = document.getElementById('pv-options-btn');
+            const blockMenuBtn = document.getElementById('pv-block-menu-btn');
             if (!followBtn) return;
             if (uid === currentUser.uid) {
                 followBtn.style.display = 'none';
                 if (editBtn) editBtn.classList.remove('hidden');
                 if (optionsBtn) optionsBtn.style.display = 'flex';
+                if (blockMenuBtn) blockMenuBtn.classList.add('hidden');
                 return;
             }
             followBtn.style.display = '';
             if (editBtn) editBtn.classList.add('hidden');
             if (optionsBtn) optionsBtn.style.display = 'none';
+            if (blockMenuBtn) blockMenuBtn.classList.remove('hidden');
             const isFollowing = myFollowing.has(uid);
             followBtn.className = `follow-btn ${isFollowing ? 'following' : 'follow'} text-sm px-5 py-2`;
             followBtn.innerText = getFollowButtonLabel(uid);
         };
+
+        window.togglePvBlockMenu = () => {
+            document.getElementById('pv-block-menu')?.classList.toggle('hidden-view');
+        };
+        // Close the block menu if the person taps anywhere else on the page.
+        document.addEventListener('click', (e) => {
+            const btn = document.getElementById('pv-block-menu-btn');
+            const menu = document.getElementById('pv-block-menu');
+            if (btn && menu && !btn.contains(e.target)) menu.classList.add('hidden-view');
+        });
 
         // --- People View ---
         window.setPeopleTab = (tab) => {
@@ -5159,6 +5476,23 @@
             profileViewSource = source;
             const u = globalData.users[uid];
             if (!u) return;
+
+            // Privacy gate — checked before any real content is populated. The owner always sees
+            // their own profile fully; anyone else only sees it fully once they're an approved
+            // follower. This is a friendly client-side mirror of the same restriction Firestore's
+            // own rules already enforce on the underlying data.
+            const isOwnProfile = uid === currentUser?.uid;
+            const isApprovedViewer = isOwnProfile || myFollowing.has(uid);
+            const isLocked = u.isPrivate === true && !isApprovedViewer;
+
+            document.getElementById('pv-content-wrap')?.classList.toggle('hidden-view', isLocked);
+            document.getElementById('pv-locked-state')?.classList.toggle('hidden-view', !isLocked);
+
+            // Even when locked, the header (name/avatar/follow button) still shows — same as
+            // Instagram, where you can see who an account belongs to and request to follow them
+            // without seeing their content. Everything below this point (stats, tabs, posts) only
+            // actually matters when NOT locked, but is harmless to populate either way since
+            // pv-content-wrap stays hidden.
 
             const allResults = globalData.results.filter(r => r.studentId === uid);
             const earnedXp = allResults.reduce((s, r) => s + r.score, 0);
