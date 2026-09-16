@@ -472,7 +472,7 @@
     <!-- Hidden element for JS enrollment ID sync (displayed in dashboard) -->
     <span id="nav-enrollment-id" class="hidden"></span>
 
-    <main class="w-full py-8">
+    <main class="w-full pt-2 pb-8">
         
         <!-- AUTH VIEW -->
         <div id="view-auth" class="hidden-view max-w-md mx-auto mt-12 fade-in">
@@ -1155,7 +1155,7 @@
     </div>
 
     <!-- PROFILE VIEW — Instagram style -->
-    <div id="view-profile" class="hidden-view fade-in max-w-2xl mx-auto px-4 py-6 app-content-offset">
+    <div id="view-profile" class="hidden-view fade-in max-w-2xl mx-auto px-4 pt-2 pb-6 app-content-offset">
 
         <!-- Top nav bar -->
         <div class="flex items-center justify-between mb-6">
@@ -1163,10 +1163,15 @@
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
             </button>
             <h2 class="font-black text-slate-800 text-base" id="pv-topbar-name">Profile</h2>
-            <div id="pv-options-btn" class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-600 cursor-pointer hover:bg-slate-50 shadow-sm transition-all" onclick="window.openSettingsPanel()" title="Settings" style="display:none">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            <div class="relative">
+                <div id="pv-options-btn" class="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-600 cursor-pointer hover:bg-slate-50 shadow-sm transition-all" onclick="window.handleProfileMenuClick()" title="Menu">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </div>
+                <!-- Menu shown on OTHER people's profiles (own profile opens Settings instead) -->
+                <div id="pv-block-menu" class="hidden-view absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-200 py-2 w-44 z-30 text-left">
+                    <button onclick="window.blockFromProfileMenu()" class="w-full px-4 py-2.5 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors">🚫 Block</button>
+                </div>
             </div>
-            <div id="pv-options-placeholder" class="w-10 h-10"></div>
         </div>
 
         <!-- Avatar + Stats Row (Instagram layout) -->
@@ -1202,12 +1207,6 @@
                 <div class="flex gap-2" id="pv-action-row">
                     <button id="pv-follow-btn" onclick="window.toggleFollowProfile()" class="flex-1 py-2 rounded-xl text-sm font-black bg-indigo-600 text-white hover:bg-indigo-700 transition-all active:scale-95 shadow-sm">Follow</button>
                     <button id="pv-edit-btn" onclick="window.openProfile()" class="flex-1 py-2 rounded-xl text-sm font-black bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all border border-slate-200 active:scale-95 hidden">✏️ Edit Profile</button>
-                    <button id="pv-block-menu-btn" onclick="window.togglePvBlockMenu()" class="w-10 py-2 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-all border border-slate-200 active:scale-95 relative hidden">
-                        <svg class="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"/></svg>
-                        <div id="pv-block-menu" class="hidden-view absolute right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 py-2 w-44 z-20 text-left">
-                            <button onclick="event.stopPropagation(); window.blockUser(viewingProfileUid, document.getElementById('pv-name')?.innerText); window.togglePvBlockMenu();" class="w-full px-4 py-2.5 text-left text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors">🚫 Block</button>
-                        </div>
-                    </button>
                 </div>
             </div>
         </div>
@@ -2438,10 +2437,9 @@
             if (!document.fullscreenElement) onAppBackgrounded('fullscreen'); else onAppForegrounded();
         });
 
-        // STRICT MODE: an exam is terminated and auto-submitted the INSTANT the candidate
-        // leaves the exam (switches app/tab, locks the screen, exits fullscreen, or backgrounds
-        // the browser). There is deliberately no grace period — set STRICT_EXAM_MODE to false
-        // and GRACE_PERIOD_SECS back to a positive number to restore the older lenient behaviour.
+        // STRICT MODE: the exam is terminated and auto-submitted the INSTANT the candidate leaves
+        // it (app switch, screen lock, tab change, exiting fullscreen). Set STRICT_EXAM_MODE to
+        // false to restore the older 15-second grace period.
         const STRICT_EXAM_MODE = true;
         const GRACE_PERIOD_SECS = 15;
 
@@ -2449,9 +2447,7 @@
             if(!activeSession) return;
 
             if (STRICT_EXAM_MODE) {
-                // Guard against double-firing: several browser signals (visibilitychange,
-                // pagehide, fullscreenchange) can all fire for one real-world event, and we must
-                // only submit once.
+                // Several browser signals can fire for one real event — only submit once.
                 if (activeSession.terminating) return;
                 activeSession.terminating = true;
                 activeSession.violations = activeSession.violations || [];
@@ -5381,32 +5377,41 @@
             const followBtn = document.getElementById('pv-follow-btn');
             const editBtn = document.getElementById('pv-edit-btn');
             const optionsBtn = document.getElementById('pv-options-btn');
-            const blockMenuBtn = document.getElementById('pv-block-menu-btn');
             if (!followBtn) return;
+            // The top-right ☰ button is always visible: on your own profile it opens Settings,
+            // on someone else's it opens a small menu containing Block (Instagram-style).
+            if (optionsBtn) optionsBtn.style.display = 'flex';
+            document.getElementById('pv-block-menu')?.classList.add('hidden-view');
             if (uid === currentUser.uid) {
                 followBtn.style.display = 'none';
                 if (editBtn) editBtn.classList.remove('hidden');
-                if (optionsBtn) optionsBtn.style.display = 'flex';
-                if (blockMenuBtn) blockMenuBtn.classList.add('hidden');
                 return;
             }
             followBtn.style.display = '';
             if (editBtn) editBtn.classList.add('hidden');
-            if (optionsBtn) optionsBtn.style.display = 'none';
-            if (blockMenuBtn) blockMenuBtn.classList.remove('hidden');
             const isFollowing = myFollowing.has(uid);
             followBtn.className = `follow-btn ${isFollowing ? 'following' : 'follow'} text-sm px-5 py-2`;
             followBtn.innerText = getFollowButtonLabel(uid);
         };
 
-        window.togglePvBlockMenu = () => {
-            document.getElementById('pv-block-menu')?.classList.toggle('hidden-view');
+        // Own profile -> Settings panel. Someone else's profile -> Block menu.
+        window.handleProfileMenuClick = () => {
+            if (viewingProfileUid && currentUser && viewingProfileUid === currentUser.uid) {
+                window.openSettingsPanel();
+            } else {
+                document.getElementById('pv-block-menu')?.classList.toggle('hidden-view');
+            }
+        };
+
+        window.blockFromProfileMenu = () => {
+            document.getElementById('pv-block-menu')?.classList.add('hidden-view');
+            window.blockUser(viewingProfileUid, document.getElementById('pv-name')?.innerText);
         };
         // Close the block menu if the person taps anywhere else on the page.
         document.addEventListener('click', (e) => {
-            const btn = document.getElementById('pv-block-menu-btn');
+            const btn = document.getElementById('pv-options-btn');
             const menu = document.getElementById('pv-block-menu');
-            if (btn && menu && !btn.contains(e.target)) menu.classList.add('hidden-view');
+            if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) menu.classList.add('hidden-view');
         });
 
         // --- People View ---
