@@ -2438,10 +2438,29 @@
             if (!document.fullscreenElement) onAppBackgrounded('fullscreen'); else onAppForegrounded();
         });
 
+        // STRICT MODE: an exam is terminated and auto-submitted the INSTANT the candidate
+        // leaves the exam (switches app/tab, locks the screen, exits fullscreen, or backgrounds
+        // the browser). There is deliberately no grace period — set STRICT_EXAM_MODE to false
+        // and GRACE_PERIOD_SECS back to a positive number to restore the older lenient behaviour.
+        const STRICT_EXAM_MODE = true;
         const GRACE_PERIOD_SECS = 15;
 
         const startGracePeriod = (reason) => {
             if(!activeSession) return;
+
+            if (STRICT_EXAM_MODE) {
+                // Guard against double-firing: several browser signals (visibilitychange,
+                // pagehide, fullscreenchange) can all fire for one real-world event, and we must
+                // only submit once.
+                if (activeSession.terminating) return;
+                activeSession.terminating = true;
+                activeSession.violations = activeSession.violations || [];
+                activeSession.violations.push({ reason, at: Date.now(), strictTermination: true });
+                document.getElementById('grace-period-overlay')?.classList.add('hidden-view');
+                showToast("Exam ended — you left the exam screen. Your answers were submitted.", "🚫");
+                window.submitExam();
+                return;
+            }
 
             // Already running — a second background signal for the same real-world event
             // (e.g. visibilitychange AND pagehide both firing) must NOT reset the clock or
