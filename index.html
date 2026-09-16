@@ -1170,9 +1170,8 @@
         </div>
 
         <!-- Avatar + Stats Row (Instagram layout) -->
-        <div id="pv-content-wrap">
         <div class="flex items-start gap-6 mb-5 px-1">
-            <!-- Avatar with ring -->
+            <!-- Avatar with ring — visible even on a locked private profile -->
             <div class="relative shrink-0">
                 <div id="pv-avatar-ring" class="p-[3px] rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600">
                     <div class="bg-white p-[3px] rounded-full">
@@ -1217,6 +1216,7 @@
         <div class="px-1 mb-5">
             <div class="font-black text-slate-900 text-sm" id="pv-name">Name</div>
             <div class="text-xs font-bold text-indigo-500" id="pv-username"></div>
+            <div id="pv-content-wrap">
             <div class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mt-0.5" id="pv-eid"></div>
             <div class="text-sm text-slate-600 mt-2 leading-relaxed whitespace-pre-line" id="pv-bio"></div>
             <!-- XP + Rank inline -->
@@ -1231,6 +1231,7 @@
                 <span class="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-700 text-xs font-black px-3 py-1 rounded-full border border-emerald-100">
                     ⭐ Best: <span id="pv-best">0 XP</span>
                 </span>
+            </div>
             </div>
         </div>
 
@@ -1284,8 +1285,7 @@
                 <p class="text-xs text-slate-300 font-semibold mt-1">Certificates and award letters will show up here.</p>
             </div>
         </div>
-        </div>
-        <!-- pv-content-wrap end -->
+        <!-- content section end -->
 
         <!-- Locked state — shown instead of the real content when this account is private and
              the viewer isn't an approved follower. This is the only enforcement point needed on
